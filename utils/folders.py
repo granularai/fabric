@@ -109,7 +109,7 @@ def onera_loader(path, city, x, y):
         band = cv2.resize(band, label_r.shape)
         bands2_stack.append(band)
 
-    
+
 
 def rgb_sequence_loader(paths, mean, std, inp_size, rand_crop_size, resize_size):
     irand = random.randint(0, inp_size[0] - rand_crop_size[0])
