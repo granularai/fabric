@@ -49,33 +49,6 @@ def make_dataset(dir, images_list, class_to_idx):
 
     return images
 
-def make_sequence_dataset(dir, sequences_list):
-    sequences = []
-
-    for sequence in sequences_list:
-        images = []
-        for image in sequence[0]:
-            images.append(dir + image)
-
-        sequences.append([images, int(sequence[1])])
-
-    return sequences
-
-def make_bimode_sequence_dataset(rgb_dir, flow_dir, sequences_list):
-    sequences = []
-
-    for sequence in sequences_list:
-        rgb_images = []
-        flow_images = []
-
-        for image in sequence[0]:
-            rgb_images.append(rgb_dir + image)
-            flow_images.append(flow_dir + image)
-
-        sequences.append([rgb_images, flow_images, int(sequence[1])])
-
-    return sequences
-
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:
@@ -91,66 +64,37 @@ def npy_seq_loader(seq):
 
     return out
 
-def onera_loader(path, city, x, y):
-    base_path1 = glob.glob(path + 'images/' + city + '/imgs_1/*.tif')[0][:-7]
-    base_path2 = glob.glob(path + 'images/' + city + '/imgs_2/*.tif')[0][:-7]
-    label_r = rasterio.open(path + 'train_labels/' + city + '/cm/' + city + '-cm.tif')
+def full_onera_loader(path):
+    cities = os.listdir(path + 'train_labels/')
 
-    bands1_stack = []
-    bands2_stack = []
-    for band in ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']:
-        band_r = rasterio.open(base_path1 + band + '.tif')
-        band = band_r.read()[0]
-        band = cv2.resize(band, label_r.shape)
-        bands1_stack.append(band)
+    dataset = {}
+    for city in cities:
+        if '.txt' not in city:
+            base_path1 = glob.glob(path + 'images/' + city + '/imgs_1/*.tif')[0][:-7]
+            base_path2 = glob.glob(path + 'images/' + city + '/imgs_2/*.tif')[0][:-7]
+            label_r = rasterio.open(path + 'train_labels/' + city + '/cm/' + city + '-cm.tif')
 
-        band_r = rasterio.open(base_path2 + band + '.tif')
-        band = band_r.read()[0]
-        band = cv2.resize(band, label_r.shape)
-        bands2_stack.append(band)
+            bands1_stack = []
+            bands2_stack = []
+            for band in ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']:
+                band_r = rasterio.open(base_path1 + band + '.tif')
+                band = band_r.read()[0]
+                band = cv2.resize(band, label_r.shape)
+                bands1_stack.append(band)
+
+                band_r = rasterio.open(base_path2 + band + '.tif')
+                band = band_r.read()[0]
+                band = cv2.resize(band, label_r.shape)
+                bands2_stack.append(band)
+
+            label = label_r.read()[0]
+            dataset[city] = {'images': np.asarray([bands1_stack, bands2_stack]), 'labels': label}
+
+    return dataset
 
 
-
-def rgb_sequence_loader(paths, mean, std, inp_size, rand_crop_size, resize_size):
-    irand = random.randint(0, inp_size[0] - rand_crop_size[0])
-    jrand = random.randint(0, inp_size[1] - rand_crop_size[1])
-    flip = random.random()
-    batch = []
-    for path in paths:
-        img = Image.open(path)
-        img = img.convert('RGB')
-        img = functional.center_crop(img, (inp_size[0], inp_size[1]))
-        img = functional.crop(img, irand, jrand, rand_crop_size[0], rand_crop_size[1])
-        img = functional.resize(img, resize_size)
-        if flip < 0.5:
-            img = functional.hflip(img)
-        tensor = functional.to_tensor(img)
-        tensor = functional.normalize(tensor, mean, std)
-        batch.append(tensor)
-
-    batch = torch.stack(batch)
-
-    return batch
-
-def flow_sequence_loader(paths, mean, std, inp_size, rand_crop_size, resize_size):
-    irand = random.randint(0, inp_size[0] - rand_crop_size[0])
-    jrand = random.randint(0, inp_size[1] - rand_crop_size[1])
-    flip = random.random()
-    batch = []
-    for path in paths:
-        img = Image.open(path)
-        img = img.convert('RGB')
-        img = functional.resize(img, resize_size)
-        img = functional.crop(img, irand, jrand, rand_crop_size[0], rand_crop_size[1])
-        if flip < 0.5:
-            img = functional.hflip(img)
-        tensor = functional.to_tensor(img)
-        tensor = functional.normalize(tensor, mean, std)
-        batch.append(tensor)
-
-    batch = torch.stack(batch)
-
-    return batch
+def onera_loader(dataset, city, x, y, size):
+    return dataset[city]['images'][x:x+size, y:y+size], dataset[city]['labels'][x:x+size, y:y+size]
 
 def accimage_loader(path):
     import accimage
@@ -221,7 +165,7 @@ class ImagePreloader(data.Dataset):
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, csv_file):
+    def __init__(self, root, csv_file, input_size):
 
         r = csv.reader(open(csv_file, 'r'), delimiter=',')
 
@@ -236,6 +180,8 @@ class OneraPreloader(data.Dataset):
             raise(RuntimeError("Found 0 images in subfolders of: " + root + "\n"
                                "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
 
+        self.full_load = full_onera_loader(path)
+        self.input_size = input_size
         self.root = root
         self.imgs = imgs
         self.loader = onera_loader
@@ -248,9 +194,9 @@ class OneraPreloader(data.Dataset):
         Returns:
             tuple: (image, target) where target is class_index of the target class.
         """
-        path, x, y, target = self.imgs[index]
+        city, x, y = self.imgs[index]
 
-        img, target = self.loader(path, x, y)
+        img, target = self.loader(self.full_load, city, x, y, self.input_size)
 
         return img, target
 
