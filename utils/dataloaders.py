@@ -2,6 +2,9 @@ import sys
 import os, csv, random
 import glob
 
+import rasterio 
+import cv2
+
 from PIL import Image
 import numpy as np
 
@@ -78,23 +81,27 @@ def full_onera_loader(path):
             bands2_stack = []
             for band in ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']:
                 band_r = rasterio.open(base_path1 + band + '.tif')
-                band = band_r.read()[0]
-                band = cv2.resize(band, label_r.shape)
-                bands1_stack.append(band)
+                band_d = band_r.read()[0]
+                band_d = cv2.resize(band_d, (label_r.shape[1], label_r.shape[0]))
+                bands1_stack.append(band_d)
 
                 band_r = rasterio.open(base_path2 + band + '.tif')
-                band = band_r.read()[0]
-                band = cv2.resize(band, label_r.shape)
-                bands2_stack.append(band)
+                band_d = band_r.read()[0]
+                band_d = cv2.resize(band_d, (label_r.shape[1], label_r.shape[0]))
+                bands2_stack.append(band_d)
 
             label = label_r.read()[0]
-            dataset[city] = {'images': np.asarray([bands1_stack, bands2_stack]), 'labels': label}
+            label -= 1
+            
+            two_dates = np.asarray([bands1_stack, bands2_stack]).astype(np.float32)
+            two_dates = np.transpose(two_dates, (1,0,2,3))
+            dataset[city] = {'images':two_dates , 'labels': label}
 
     return dataset
 
 
 def onera_loader(dataset, city, x, y, size):
-    return dataset[city]['images'][x:x+size, y:y+size], dataset[city]['labels'][x:x+size, y:y+size]
+    return dataset[city]['images'][:, : ,x:x+size, y:y+size], dataset[city]['labels'][x:x+size, y:y+size]
 
 def accimage_loader(path):
     import accimage
@@ -172,18 +179,15 @@ class OneraPreloader(data.Dataset):
         images_list = []
 
         for row in r:
-            images_list.append([row[0], row[1], row[2], row[3]])
+            images_list.append([row[0], int(row[1]), int(row[2])])
 
 
         random.shuffle(images_list)
-        if len(imgs) == 0:
-            raise(RuntimeError("Found 0 images in subfolders of: " + root + "\n"
-                               "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
 
-        self.full_load = full_onera_loader(path)
+        self.full_load = full_onera_loader(root)
         self.input_size = input_size
         self.root = root
-        self.imgs = imgs
+        self.imgs = images_list
         self.loader = onera_loader
 
     def __getitem__(self, index):
@@ -197,7 +201,6 @@ class OneraPreloader(data.Dataset):
         city, x, y = self.imgs[index]
 
         img, target = self.loader(self.full_load, city, x, y, self.input_size)
-
         return img, target
 
     def __len__(self):

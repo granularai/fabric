@@ -32,7 +32,6 @@ class LSTMAENet(nn.Module):
 #print (lstm_ae_net)
 
 cities = os.listdir('../datasets/onera/hist_matched_npys/')
-cities = ['beihai.npy']
 for city in cities:
     lstm_ae_net = LSTMAENet(32, 64)
     
@@ -54,31 +53,31 @@ for city in cities:
     print (data.shape)
     
     lstm_ae_net.cuda()
-#     lstm_ae_net.zero_grad()
+    lstm_ae_net.zero_grad()
 
-#     #loss_function = nn.L1Loss()#loss_fu 
-#     loss_function = nn.MSELoss()
-#     lr = 0.0001
-#     optimizer = optim.SGD(lstm_ae_net.parameters(), lr=lr)
+    #loss_function = nn.L1Loss()#loss_fu 
+    loss_function = nn.MSELoss()
+    lr = 0.0001
+    optimizer = optim.SGD(lstm_ae_net.parameters(), lr=lr)
 
-#     for epoch in range(10):
-#         data = np.random.permutation(data)
-#         epoch_loss = []
-#         for i in range(0, data.shape[0], 256):
-#             batch = data[i:i+256, :, :]
-#             batch = Variable(torch.from_numpy(batch).type(torch.FloatTensor).cuda())
-#             lstm_ae_net.zero_grad()
-#             out = lstm_ae_net(batch)
-#             loss = loss_function(out, batch)
-#             loss.backward()
-#             optimizer.step()
+    for epoch in range(10):
+        data = np.random.permutation(data)
+        epoch_loss = []
+        for i in range(0, data.shape[0], 256):
+            batch = data[i:i+256, :, :]
+            batch = Variable(torch.from_numpy(batch).type(torch.FloatTensor).cuda())
+            lstm_ae_net.zero_grad()
+            out = lstm_ae_net(batch)
+            loss = loss_function(out, batch)
+            loss.backward()
+            optimizer.step()
 
-#             #print (loss.data[0])
-#             epoch_loss.append(loss.data[0])
+            #print (loss.data[0])
+            epoch_loss.append(loss.data[0])
 
-#         print (city[:-4] + " epoch " + str(epoch) +  ": " + str(np.mean(epoch_loss)))
+        print (city[:-4] + " epoch " + str(epoch) +  ": " + str(np.mean(epoch_loss)))
 
-#     torch.save(lstm_ae_net, '../weights/arch32x64_hm_' + city[:-3] + 'pt')
+    torch.save(lstm_ae_net, '../weights/arch32x64_hm_' + city[:-3] + 'pt')
 
 
     lstm_ae_net = torch.load('../weights/arch32x64_hm_' + city[:-3] + 'pt')
