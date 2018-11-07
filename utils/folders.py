@@ -1,5 +1,6 @@
 import sys
 import os, csv, random
+import glob
 
 from PIL import Image
 import numpy as np
@@ -89,6 +90,26 @@ def npy_seq_loader(seq):
     out = np.asarray(out)
 
     return out
+
+def onera_loader(path, city, x, y):
+    base_path1 = glob.glob(path + 'images/' + city + '/imgs_1/*.tif')[0][:-7]
+    base_path2 = glob.glob(path + 'images/' + city + '/imgs_2/*.tif')[0][:-7]
+    label_r = rasterio.open(path + 'train_labels/' + city + '/cm/' + city + '-cm.tif')
+
+    bands1_stack = []
+    bands2_stack = []
+    for band in ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']:
+        band_r = rasterio.open(base_path1 + band + '.tif')
+        band = band_r.read()[0]
+        band = cv2.resize(band, label_r.shape)
+        bands1_stack.append(band)
+
+        band_r = rasterio.open(base_path2 + band + '.tif')
+        band = band_r.read()[0]
+        band = cv2.resize(band, label_r.shape)
+        bands2_stack.append(band)
+
+    
 
 def rgb_sequence_loader(paths, mean, std, inp_size, rand_crop_size, resize_size):
     irand = random.randint(0, inp_size[0] - rand_crop_size[0])
@@ -198,107 +219,26 @@ class ImagePreloader(data.Dataset):
         return len(self.imgs)
 
 
-class SequencePreloader(data.Dataset):
-
-    def __init__(self, root, csv_file, mean, std, inp_size, rand_crop_size, resize_size):
-
-        r = csv.reader(open(csv_file, 'r'), delimiter=',')
-
-        sequences_list = []
-
-        for row in r:
-            sequences_list.append([row[0:-1],row[-1]])
-
-        random.shuffle(sequences_list)
-        sequences = make_sequence_dataset(root, sequences_list)
-
-
-        self.root = root
-        self.sequences = sequences
-        if 'flow' in root:
-            self.loader = flow_sequence_loader
-        else:
-            self.loader = rgb_sequence_loader
-        self.mean = mean
-        self.std = std
-        self.inp_size = inp_size
-        self.rand_crop_size = rand_crop_size
-        self.resize_size = resize_size
-
-    def __getitem__(self, index):
-        """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is class_index of the target class.
-        """
-        paths, target = self.sequences[index]
-        sequence = self.loader(paths, self.mean, self.std, self.inp_size, self.rand_crop_size, self.resize_size)
-
-        return sequence, target
-
-    def __len__(self):
-        return len(self.sequences)
-
-class NpySequencePreloader(data.Dataset):
+class OneraPreloader(data.Dataset):
 
     def __init__(self, root, csv_file):
 
-        r = csv.reader(open(root + csv_file, 'r'), delimiter=',')
+        r = csv.reader(open(csv_file, 'r'), delimiter=',')
 
-        sequence_list = []
+        images_list = []
+
         for row in r:
-            sequence_list.append([row[0:-1], int(row[-1])])
+            images_list.append([row[0], row[1], row[2], row[3]])
 
-        sequences = make_sequence_dataset(root, sequence_list)
+
+        random.shuffle(images_list)
+        if len(imgs) == 0:
+            raise(RuntimeError("Found 0 images in subfolders of: " + root + "\n"
+                               "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
 
         self.root = root
-        self.sequences = sequences
-        self.loader = npy_seq_loader
-
-    def __getitem__(self, index):
-        """
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target) where target is class_index of the target class.
-        """
-        paths, target = self.sequences[index]
-        seq = self.loader(paths)
-
-        return seq, target
-
-    def __len__(self):
-        return len(self.sequences)
-
-class BiModeSequencePreloader(data.Dataset):
-
-    def __init__(self, rgb_param, flow_param):
-
-        r = csv.reader(open(rgb_param[1], 'r'), delimiter=',')
-
-        sequences_list = []
-
-        for row in r:
-            sequences_list.append([row[0:-1],row[-1]])
-
-        random.shuffle(sequences_list)
-        bimode_sequences = make_bimode_sequence_dataset(rgb_param[0], flow_param[0], sequences_list)
-
-        self.bimode_sequences = bimode_sequences
-        self.flow_loader = flow_sequence_loader
-        self.rgb_loader = rgb_sequence_loader
-        self.rgb_mean = rgb_param[2]
-        self.flow_mean = flow_param[2]
-        self.rgb_std = rgb_param[3]
-        self.flow_std = flow_param[3]
-        self.rgb_inp_size = rgb_param[4]
-        self.flow_inp_size = flow_param[4]
-        self.rgb_rand_crop_size = rgb_param[5]
-        self.flow_rand_crop_size = flow_param[5]
-        self.rgb_resize_size = rgb_param[6]
-        self.flow_resize_size = flow_param[6]
+        self.imgs = imgs
+        self.loader = onera_loader
 
     def __getitem__(self, index):
         """
@@ -308,42 +248,11 @@ class BiModeSequencePreloader(data.Dataset):
         Returns:
             tuple: (image, target) where target is class_index of the target class.
         """
-        rgb_paths, flow_paths, target = self.bimode_sequences[index]
-        rgb_sequence = self.rgb_loader(rgb_paths, self.rgb_mean, self.rgb_std, self.rgb_inp_size, self.rgb_rand_crop_size, self.rgb_resize_size)
-        flow_sequence = self.flow_loader(flow_paths, self.flow_mean, self.flow_std, self.flow_inp_size, self.flow_rand_crop_size, self.flow_resize_size)
+        path, x, y, target = self.imgs[index]
 
-        return rgb_sequence, flow_sequence, target
+        img, target = self.loader(path, x, y)
 
-    def __len__(self):
-        return len(self.bimode_sequences)
-
-class BiModeNpySequencePreloader(data.Dataset):
-
-    def __init__(self, rgb_param, flow_param):
-
-        r = csv.reader(open(rgb_param[1], 'r'), delimiter=',')
-
-        sequence_list = []
-        for row in r:
-            sequence_list.append([row[0:-1], int(row[-1])])
-
-        bimode_sequences = make_bimode_sequence_dataset(rgb_param[0], flow_param[0], sequence_list)
-
-        self.bimode_sequences = bimode_sequences
-        self.loader = npy_seq_loader
-
-    def __getitem__(self, index):
-        """
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target) where target is class_index of the target class.
-        """
-        rgb_paths, flow_paths, target = self.bimode_sequences[index]
-        rgb_seq = self.loader(rgb_paths)
-        flow_seq = self.loader(flow_paths)
-
-        return rgb_seq, flow_seq, target
+        return img, target
 
     def __len__(self):
-        return len(self.bimode_sequences)
+        return len(self.imgs)

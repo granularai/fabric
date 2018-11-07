@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 from config import GTEA as DATA
-from utils.folder import ChangeDetectionPreloader
+from utils.folder import OneraPreloader
 
 
 use_gpu = torch.cuda.is_available()
@@ -146,8 +146,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
 
 
 #Dataload and generator initialization
-image_datasets = {'train': ChangeDetectionPreloader(data_dir , train_csv, class_map, data_transforms['train']),
-                    'test': ChangeDetectionPreloader(data_dir , test_csv, class_map, data_transforms['test'])}
+image_datasets = {'train': OneraPreloader(data_dir , train_csv, class_map, data_transforms['train']),
+                    'test': OneraPreloader(data_dir , test_csv, class_map, data_transforms['test'])}
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'test']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 class_names = image_datasets['train'].classes
