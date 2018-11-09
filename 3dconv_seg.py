@@ -70,7 +70,7 @@ class Conv3DSegNet(nn.Module):
         
         self.conv12d = nn.Conv2d(64, 64, kernel_size=3, padding=1)
         self.bn12d = nn.BatchNorm2d(64)
-        self.conv11d = nn.Conv2d(64, 1, kernel_size=3, padding=1)
+        self.conv11d = nn.Conv2d(64, 2, kernel_size=3, padding=1)
         
     def forward(self, x):
          # Stage 1
@@ -109,7 +109,7 @@ class Conv3DSegNet(nn.Module):
         x12d = F.relu(self.bn12d(self.conv12d(x1d)))
         x11d = self.conv11d(x12d)
         
-        return x11d.view(-1, 32, 32)
+        return x11d
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
     """
@@ -152,9 +152,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
                 inputs, labels = data
                 if use_gpu:
                     inputs = Variable(inputs.cuda(DEVICE))
-                    labels = Variable(labels.type(torch.FloatTensor).cuda(DEVICE))
+                    labels = Variable(labels.type(torch.LongTensor).cuda(DEVICE))
                 else:
-                    inputs, labels = Variable(inputs), Variable(labels.type(torch.FloatTensor))
+                    inputs, labels = Variable(inputs), Variable(labels.type(torch.LongTensor))
 
                 optimizer.zero_grad()
                 outputs = model(inputs)
@@ -167,7 +167,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
 
                 running_loss += loss.item()
                 
-                preds = outputs > 0.5
+                _, preds = torch.max(outputs, 1)
                 preds = preds.cpu().numpy().flatten()
                 labels = labels.cpu().numpy().flatten()
                 running_corrects += np.sum(preds == labels) / (32*32)
@@ -227,17 +227,12 @@ if use_gpu:
     model_conv = model_conv.cuda(DEVICE)
 
 #Initialize optimizer and loss function
-# weight1 = np.ones((32,32)) * 1/(1-0.0220811521931)
-# weight2 = np.ones((32,32)) * 1/0.0220811521931
-# class_weights = np.transpose(np.stack([weight1, weight2]), (1,2,0))
-# class_weights = torch.from_numpy(class_weights).cuda(DEVICE)
-# print (class_weights.size())
-criterion = nn.BCEWithLogitsLoss()
+
+class_weights = torch.from_numpy(np.array([1/(1-0.0220811521931),1/0.0220811521931])).float().cuda()
+criterion = nn.CrossEntropyLoss(class_weights)
 
 optimizer_conv = optim.SGD(model_conv.parameters(), lr=lr, momentum=momentum)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=step_size, gamma=gamma)
 
 #Train model
 model_conv = train_model(model_conv, criterion, optimizer_conv, exp_lr_scheduler, num_epochs=num_epochs)
-# inp = torch.randn(8,13,2,32,32).cuda()
-# model_conv(inp)
