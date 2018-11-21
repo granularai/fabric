@@ -29,6 +29,7 @@ step_size = 50
 gamma = 1
 num_epochs = 50
 batch_size = 32
+
 data_dir = '../datasets/onera/'
 weights_dir = '../weights/onera/'
 train_csv = '../datasets/onera/train.csv'
@@ -37,30 +38,78 @@ test_csv = '../datasets/onera/test.csv'
 class Conv3DSegNet(nn.Module):
     def __init__(self):
         super(Conv3DSegNet, self).__init__()
-        self.conv1 = nn.Conv3d(13, 64, 2)
-        self.conv2 = nn.Conv2d(64, 128, 3)
-        self.conv3 = nn.Conv2d(128, 256, 3)
-        self.deconv1 = nn.ConvTranspose2d(256, 128, 3)
-        self.deconv2 = nn.ConvTranspose2d(128, 64, 3)
-        self.deconv3 = nn.ConvTranspose2d(64, 1, 2)
-
+        
+        self.conv11 = nn.Conv3d(13, 64, kernel_size=3, padding=1)
+        self.bn11 = nn.BatchNorm3d(64)
+        self.conv12 = nn.Conv3d(64, 64, kernel_size=3, padding=1)
+        self.bn12 = nn.BatchNorm3d(64)
+        
+        self.conv21 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.bn21 = nn.BatchNorm2d(128)
+        self.conv22 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn22 = nn.BatchNorm2d(128)
+        
+        self.conv31 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.bn31 = nn.BatchNorm2d(256)
+        self.conv32 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn32 = nn.BatchNorm2d(256)
+        self.conv33 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn33 = nn.BatchNorm2d(256)
+        
+        self.conv33d = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn33d = nn.BatchNorm2d(256)
+        self.conv32d = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn32d = nn.BatchNorm2d(256)
+        self.conv31d = nn.Conv2d(256, 128, kernel_size=3, padding=1)
+        self.bn31d = nn.BatchNorm2d(128)
+        
+        self.conv22d = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn22d = nn.BatchNorm2d(128)
+        self.conv21d = nn.Conv2d(128, 64, kernel_size=3, padding=1)
+        self.bn21d = nn.BatchNorm2d(64)
+        
+        self.conv12d = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn12d = nn.BatchNorm2d(64)
+        self.conv11d = nn.Conv2d(64, 2, kernel_size=3, padding=1)
+        
     def forward(self, x):
-        #print (x.size())
-        x = F.relu(self.conv1(x))
-        #print (x.size())
-        x = x.view(-1, 64, 31, 31)
-        x = F.relu(self.conv2(x))
-        #print (x.size())
-        x = F.relu(self.conv3(x))
-        #print (x.size())
-        x = self.deconv1(x)
-        #print (x.size())
-        x = self.deconv2(x)
-        #print (x.size())
-        x = self.deconv3(x)
-        #print (x.size())
-        x = x.view(-1, 32, 32)
-        return x
+         # Stage 1
+        x11 = F.relu(self.bn11(self.conv11(x)))
+        x12 = F.relu(self.bn12(self.conv12(x11)))
+        x1p, id1 = F.max_pool3d(x12,kernel_size=2, stride=2,return_indices=True)
+
+        x1p = x1p.view(-1, 64, 16, 16)
+        id1 = id1.view(-1, 64, 16, 16)
+        
+        # Stage 2
+        x21 = F.relu(self.bn21(self.conv21(x1p)))
+        x22 = F.relu(self.bn22(self.conv22(x21)))
+        x2p, id2 = F.max_pool2d(x22,kernel_size=2, stride=2,return_indices=True)
+
+        # Stage 3
+        x31 = F.relu(self.bn31(self.conv31(x2p)))
+        x32 = F.relu(self.bn32(self.conv32(x31)))
+        x33 = F.relu(self.bn33(self.conv33(x32)))
+        x3p, id3 = F.max_pool2d(x33,kernel_size=2, stride=2,return_indices=True)
+
+
+        # Stage 3d
+        x3d = F.max_unpool2d(x3p, id3, kernel_size=2, stride=2)
+        x33d = F.relu(self.bn33d(self.conv33d(x3d)))
+        x32d = F.relu(self.bn32d(self.conv32d(x33d)))
+        x31d = F.relu(self.bn31d(self.conv31d(x32d)))
+
+        # Stage 2d
+        x2d = F.max_unpool2d(x31d, id2, kernel_size=2, stride=2)
+        x22d = F.relu(self.bn22d(self.conv22d(x2d)))
+        x21d = F.relu(self.bn21d(self.conv21d(x22d)))
+
+        # Stage 1d
+        x1d = F.max_unpool2d(x21d, id1, kernel_size=2, stride=2)
+        x12d = F.relu(self.bn12d(self.conv12d(x1d)))
+        x11d = self.conv11d(x12d)
+        
+        return x11d
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
     """
@@ -103,9 +152,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
                 inputs, labels = data
                 if use_gpu:
                     inputs = Variable(inputs.cuda(DEVICE))
-                    labels = Variable(labels.type(torch.FloatTensor).cuda(DEVICE))
+                    labels = Variable(labels.type(torch.LongTensor).cuda(DEVICE))
                 else:
-                    inputs, labels = Variable(inputs), Variable(labels.type(torch.FloatTensor))
+                    inputs, labels = Variable(inputs), Variable(labels.type(torch.LongTensor))
 
                 optimizer.zero_grad()
                 outputs = model(inputs)
@@ -118,7 +167,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=2000):
 
                 running_loss += loss.item()
                 
-                preds = outputs > 0.5
+                _, preds = torch.max(outputs, 1)
                 preds = preds.cpu().numpy().flatten()
                 labels = labels.cpu().numpy().flatten()
                 running_corrects += np.sum(preds == labels) / (32*32)
@@ -178,12 +227,9 @@ if use_gpu:
     model_conv = model_conv.cuda(DEVICE)
 
 #Initialize optimizer and loss function
-# weight1 = np.ones((32,32)) * 1/(1-0.0220811521931)
-# weight2 = np.ones((32,32)) * 1/0.0220811521931
-# class_weights = np.transpose(np.stack([weight1, weight2]), (1,2,0))
-# class_weights = torch.from_numpy(class_weights).cuda(DEVICE)
-# print (class_weights.size())
-criterion = nn.BCEWithLogitsLoss()
+
+class_weights = torch.from_numpy(np.array([1/(1-0.0220811521931),1/0.0220811521931])).float().cuda()
+criterion = nn.CrossEntropyLoss(class_weights)
 
 optimizer_conv = optim.SGD(model_conv.parameters(), lr=lr, momentum=momentum)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=step_size, gamma=gamma)
