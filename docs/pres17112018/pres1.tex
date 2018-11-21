@@ -62,7 +62,7 @@ Belmont MA, 02478 USA}
   \item Output: Change mask between start and end dates.
 \end{enumerate}
 \vspace{.5cm}
-\includegraphics[width=1\linewidth]{images/teaser}
+  \includegraphics[scale=0.25]{images/cdteaser}
 \end{center}
 \end{frame}
 
@@ -108,19 +108,28 @@ Belmont MA, 02478 USA}
     \item RNNs have vanishing and exploding gradients problem.
     \item LSTM resolves above problems.
     \item Computes when to forget and when to remember.
-    \begin{center}
-      \begin{figure}
-      \includegraphics[width=0.6\linewidth, height=4cm]{images/lstm}
-      \caption{LSTM Cell.}
-      \end{figure}
-    \end{center}
   \end{enumerate}
+  \begin{center}
+    \begin{figure}
+    \includegraphics[width=0.6\linewidth, height=4cm]{images/lstm}
+    \caption{LSTM Cell.}
+    \end{figure}
+  \end{center}
 \end{frame}
 
 \begin{frame}{3D Convolution}
   \begin{enumerate}
-
+    \item 4D data, height, width, time/depth, and channel
+    \item 3D kernel, 3D convolve operation
+    \item Convolve along height, width and time/depth
+    \item Used in video tasks and 3d medical images
   \end{enumerate}
+  \begin{center}
+    \begin{figure}
+    \includegraphics[width=0.6\linewidth, height=4cm]{images/3dconvolution}
+    \caption{LSTM Cell.}
+    \end{figure}
+  \end{center}
 \end{frame}
 
 \section{Dataset}
@@ -132,13 +141,6 @@ Belmont MA, 02478 USA}
     \item 14 location for training, 10 for testing.
     \item 13 bands, sentinel data.
     \item Change mask, but everything reprojected.
-  \end{enumerate}
-\end{frame}
-
-\section{Experiments and Results}
-\begin{frame}{Dataset and Experiments}{Experimental Setup}
-  \begin{enumerate}
-
   \end{enumerate}
 \end{frame}
 
