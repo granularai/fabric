@@ -146,22 +146,27 @@ Belmont MA, 02478 USA}
 
 \begin{frame}{Dataset and Experiments}{Unsupervised Change Detection}
   \begin{enumerate}
-
+    \item Multiple dates, single pixel as input.
+    \item Try to reconstruct the input.
+    \item If change occurs reconstruction error is high.
   \end{enumerate}
   \begin{center}
     \begin{figure}
-    \includegraphics[scale=0.35]{images/}
+    \includegraphics[scale=0.35]{images/rnn_enc_dec}
     \end{figure}
   \end{center}
 \end{frame}
 
 \begin{frame}{Dataset and Experiments}{Supervised Change Detection: 3D CNN}
   \begin{enumerate}
-
+      \item Use labeled data, change mask.
+      \item Stack multiple dates as input.
+      \item Apply 3D convolution, then 2d convolution.
+      \item SegNet like architecture.
   \end{enumerate}
   \begin{center}
     \begin{figure}
-    \includegraphics[scale=0.35]{images/}
+    \includegraphics[scale=0.35]{images/3dconv_seg}
     \end{figure}
   \end{center}
 \end{frame}
