@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1542830327 "pres1.tex" "pres1.pdf" "pres1" 1542830327
+["pdflatex"] 1542889590 "pres1.tex" "pres1.pdf" "pres1" 1542889590
   "/usr/local/texlive/2017/texmf-dist/fonts/map/fontname/texfonts.map" 1480098670 3287 e6b82fe08f5336d4d5ebc73fb1152e87 ""
   "/usr/local/texlive/2017/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1480098698 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2017/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1480098698 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -246,15 +246,15 @@
   "images/RNN.pdf" 1542827969 28954 0210173154857671b5f7682b06579f13 ""
   "images/cdteaser.pdf" 1542830207 366990 abee7a7fd5b9c4e67b953eb184e99fdf ""
   "images/lstm.pdf" 1542829817 18832 8a5faad9769ba1e4c6eb927d089b55cb ""
-  "pres1.aux" 1542830264 4449 767cd77668d45f881feaea62d8e75e63 ""
-  "pres1.nav" 1542830264 2495 cfdffa9c4ad9c3c9094ca14190057b7c ""
-  "pres1.out" 1542830264 259 9d059927b6e3d02493c61ea916c6bfc3 ""
-  "pres1.tex" 1542830327 4916 a39d37c6da8fdc942636607c170575d9 ""
+  "pres1.aux" 1542830329 4008 6e6ecc80da105aaa190d8e9d690bc52d ""
+  "pres1.nav" 1542830329 2222 9f77365da80107d933454bf27a196bea ""
+  "pres1.out" 1542830329 201 9b947a065f62531dfad206a35e94f11e ""
+  "pres1.tex" 1542889589 4916 a39d37c6da8fdc942636607c170575d9 ""
   (generated)
-  "pres1.aux"
-  "pres1.log"
   "pres1.toc"
   "pres1.snm"
-  "pres1.out"
+  "pres1.log"
   "pres1.pdf"
+  "pres1.aux"
+  "pres1.out"
   "pres1.nav"

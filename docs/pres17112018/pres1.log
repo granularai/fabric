@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.12.22)  21 NOV 2018 20:58
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.12.22)  22 NOV 2018 13:26
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1130,7 +1130,7 @@ LaTeX Font Warning: Font shape `OT1/cmss/m/n' in size <4> not available
 {/usr/local/texlive/2017/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
 [2
 
-] <images/cdteaser.pdf, id=47, 722.7pt x 542.025pt>
+] <images/cdteaser.pdf, id=43, 722.7pt x 542.025pt>
 File: images/cdteaser.pdf Graphic file (type pdf)
 
 <use images/cdteaser.pdf>
@@ -1159,7 +1159,7 @@ line 104.
 (/usr/local/texlive/2017/texmf-dist/tex/latex/sansmathaccent/ot1mathkerncmss.fd
 File: ot1mathkerncmss.fd 2013/03/27 Fontinst v1.933 font definitions for OT1/ma
 thkerncmss.
-) <images/RNN.pdf, id=81, 867.24pt x 469.755pt>
+) <images/RNN.pdf, id=77, 867.24pt x 469.755pt>
 File: images/RNN.pdf Graphic file (type pdf)
  <use images/RNN.pdf>
 Package pdftex.def Info: images/RNN.pdf used on input line 104.
@@ -1170,7 +1170,7 @@ Overfull \vbox (6.53937pt too high) detected at line 104
 
 [6
 
- <./images/RNN.pdf>] <images/lstm.pdf, id=109, 722.7pt x 542.025pt>
+ <./images/RNN.pdf>] <images/lstm.pdf, id=105, 722.7pt x 542.025pt>
 File: images/lstm.pdf Graphic file (type pdf)
 
 <use images/lstm.pdf>
@@ -1179,7 +1179,7 @@ Package pdftex.def Info: images/lstm.pdf used on input line 118.
  [7
 
  <./images/lstm.pdf>]
-<images/3dconvolution.pdf, id=127, 722.7pt x 542.025pt>
+<images/3dconvolution.pdf, id=123, 722.7pt x 542.025pt>
 File: images/3dconvolution.pdf Graphic file (type pdf)
 
 <use images/3dconvolution.pdf>
@@ -1270,44 +1270,35 @@ Package atveryend Info: Empty hook `AfterLastShipout' on input line 190.
  (./pres1.aux)
 Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 190.
 Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 190.
+Package rerunfilecheck Info: File `pres1.out' has not changed.
+(rerunfilecheck)             Checksum: 9B947A065F62531DFAD206A35E94F11E;201.
 
-
-Package rerunfilecheck Warning: File `pres1.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `pres1.out':
-(rerunfilecheck)             Before: 9D059927B6E3D02493C61EA916C6BFC3;259
-(rerunfilecheck)             After:  9B947A065F62531DFAD206A35E94F11E;201.
 
 LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 1.0pt have occurred.
 
  ) 
 Here is how much of TeX's memory you used:
- 30806 strings out of 492995
- 741015 string characters out of 6132703
+ 30799 strings out of 492995
+ 740953 string characters out of 6132703
  964998 words of memory out of 5000000
- 33704 multiletter control sequences out of 15000+600000
+ 33698 multiletter control sequences out of 15000+600000
  11663 words of font info for 42 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  64i,11n,98p,771b,609s stack positions out of 5000i,500n,10000p,200000b,80000s
-pdfTeX warning (dest): name{Outline0.5} has been referenced but does not exis
-t, replaced by a fixed one
-
-</usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><
-/usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></
-usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb></u
-sr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss17.pfb></us
-r/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/
-local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></usr/lo
-cal/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi10.pfb></usr/lo
-cal/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi8.pfb></usr/loc
-al/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
-Output written on pres1.pdf (15 pages, 522435 bytes).
+</usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
+></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb>
+</usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb><
+/usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss17.pfb></
+usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></us
+r/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></usr/
+local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi10.pfb></usr/
+local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi8.pfb></usr/l
+ocal/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
+Output written on pres1.pdf (15 pages, 522352 bytes).
 PDF statistics:
- 224 PDF objects out of 1000 (max. 8388607)
- 173 compressed objects within 2 object streams
- 36 named destinations out of 1000 (max. 500000)
- 103 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 220 PDF objects out of 1000 (max. 8388607)
+ 169 compressed objects within 2 object streams
+ 35 named destinations out of 1000 (max. 500000)
+ 95 words of extra memory for PDF output out of 10000 (max. 10000000)
 
