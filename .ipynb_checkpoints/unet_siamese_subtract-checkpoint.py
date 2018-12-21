@@ -148,7 +148,7 @@ def weighted_dice_coef(y_pred, y_true):
     intersection_0 = (y_true_f_0 * y_pred_f_0).sum()
     intersection_1 = (y_true_f_1 * y_pred_f_1).sum()
 
-    return 2 * (w_0 * intersection_0 + w_1 * intersection_1) / ((w_0 * (y_true_f_0.sum() + y_pred_f_0.sum())) + (w_1 * (y_true_f_1.sum() + y_pred_f_1.sum())))
+    return 1 - 2 * (w_0 * intersection_0 + w_1 * intersection_1) / ((w_0 * (y_true_f_0.sum() + y_pred_f_0.sum())) + (w_1 * (y_true_f_1.sum() + y_pred_f_1.sum())))
 
 class FocalLoss(nn.Module):
     def __init__(self, gamma):
@@ -178,7 +178,7 @@ def get_loss(loss):
         return weighted_dice_coef
     elif loss == 'focal':
         print('focal')
-        return w(FocalLoss(0.022826975609355593))
+        return w(FocalLoss(0.025))
     else:
         print('bce')
         return w(nn.BCEWithLogitsLoss())
@@ -190,13 +190,13 @@ def w(v):
         return v.cuda()
     return v
 
-epochs = 100
-batch_size = 128
+epochs = 50
+batch_size = 256
 input_size = 32
 layers = 5
 lr = 0.001
 init_filters = 32
-loss = 'wdice'
+loss_func = 'focal'
 init_val = 0.022826975609355593
 bands = ['B02', 'B03', 'B04', 'B08']
 data_dir = '../datasets/onera/'
@@ -205,7 +205,7 @@ train_csv = '../datasets/onera/train.csv'
 test_csv = '../datasets/onera/test.csv'
 
 net = w(UNetClassify(layers=layers, init_filters=init_filters, init_val=init_val))
-criterion = get_loss(loss)
+criterion = get_loss(loss_func)
 optimizer = optim.Adam(net.parameters(), lr=lr)
 train_dataset = OneraPreloader(data_dir , train_csv, input_size, bands, onera_siamese_loader)
 train = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
@@ -259,6 +259,7 @@ for epoch in tqdm(range(epochs)):
         import copy
         best_net_dict = copy.deepcopy(net.state_dict())
         best_loss = np.mean(losses)
+        torch.save(best_net_dict, '../weights/onera/unet_siamese_prod_relu_inp32_4band_2dates_' + loss_func + '_hm_cnc_all_14_cities.pt')
     print(np.mean(losses), np.mean(iou), best_loss, best_iou)
 
-torch.save(best_net_dict, '../weights/onera/unet_siamese_prod_relu_inp32_4band_2dates_focal_hm.pt')
+    
