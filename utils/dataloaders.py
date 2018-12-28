@@ -2,7 +2,7 @@ import sys
 import os, csv, random, math
 import glob
 
-import rasterio 
+import rasterio
 import cv2
 
 from PIL import Image
@@ -55,23 +55,23 @@ def match_band(source, template):
     template = template.ravel()
 
     perm = source.argsort(kind='heapsort')
-    
+
     aux = source[perm]
     flag = np.concatenate(([True], aux[1:] != aux[:-1]))
     s_values = aux[flag]
-    
+
     iflag = np.cumsum(flag) - 1
     inv_idx = np.empty(source.shape, dtype=np.intp)
     inv_idx[perm] = iflag
     bin_idx = inv_idx
-    
+
     idx = np.concatenate(np.nonzero(flag) + ([source.size],))
     s_counts = np.diff(idx)
-    
+
     a = pd.value_counts(template).sort_index()
     t_values = np.asarray(a.index)
     t_counts = np.asarray(a.values)
-    
+
     s_quantiles = np.cumsum(s_counts).astype(np.float32)
     s_quantiles /= s_quantiles[-1]
 
@@ -84,7 +84,7 @@ def match_band(source, template):
 
     return interp_t_values[bin_idx].reshape(oldshape)
 
-        
+
 def stretch_8bit(band, lower_percent=5, higher_percent=95):
     """stretch_8bit takes a 3 band image (as an array) and returns an 8bit array with clipped values (5-95%) stretched to 0-255
 
@@ -162,22 +162,21 @@ def full_onera_loader(path, bands):
             bands2_stack = []
             for band in bands:
                 band1_r = rasterio.open(base_path1 + band + '.tif')
-                band1_d = band1_r.read()[0]
                 band2_r = rasterio.open(base_path2 + band + '.tif')
+
+                band1_d = band1_r.read()[0]
                 band2_d = band2_r.read()[0]
-                
+
                 band2_d = match_band(band2_d, band1_d)
-                
-                band1_d = stretch_8bit(band1_d, 2, 98).astype(np.float32)
-                band1_d = band1_d / 255
+
+                band1_d = stretch_8bit(band1_d, 2, 98).astype(np.float32) / 255.
                 band1_d = cv2.resize(band1_d, (label.shape[1], label.shape[0]))
                 bands1_stack.append(band1_d)
 
-                band2_d = stretch_8bit(band2_d, 2, 98).astype(np.float32)
-                band2_d = band2_d / 255
+                band2_d = stretch_8bit(band2_d, 2, 98).astype(np.float32) / 255.
                 band2_d = cv2.resize(band2_d, (label.shape[1], label.shape[0]))
                 bands2_stack.append(band2_d)
-                
+
             two_dates = np.asarray([bands1_stack, bands2_stack])
             two_dates = np.transpose(two_dates, (1,0,2,3))
             dataset[city] = {'images':two_dates , 'labels': label.astype(np.uint8)}
@@ -193,36 +192,35 @@ def full_onera_loader_with_pc_priors(path, bands):
             base_path1 = glob.glob(path + 'images/' + city + '/imgs_1/*.tif')[0][:-7]
             base_path2 = glob.glob(path + 'images/' + city + '/imgs_2/*.tif')[0][:-7]
             label = cv2.imread(path + 'train_labels/' + city + '/cm/' + 'cm.png', 0) / 255
-            pc = np.load(path + 'results/patch_classifier_' + city + '_probs.npy').astype(np.float32)
-            
+            pc_priors = np.load(path + 'results/patch_classifier_' + city + '_probs.npy').astype(np.float32)
+
             bands1_stack = []
             bands2_stack = []
             for band in bands:
                 band1_r = rasterio.open(base_path1 + band + '.tif')
-                band1_d = band1_r.read()[0]
                 band2_r = rasterio.open(base_path2 + band + '.tif')
+
+                band1_d = band1_r.read()[0]
                 band2_d = band2_r.read()[0]
-                
+
                 band2_d = match_band(band2_d, band1_d)
-                
-                band1_d = stretch_8bit(band1_d, 2, 98).astype(np.float32)
-                band1_d = band1_d / 255
+
+                band1_d = stretch_8bit(band1_d, 2, 98).astype(np.float32) / 255.
                 band1_d = cv2.resize(band1_d, (label.shape[1], label.shape[0]))
                 bands1_stack.append(band1_d)
 
-                band2_d = stretch_8bit(band2_d, 2, 98).astype(np.float32)
-                band2_d = band2_d / 255
+                band2_d = stretch_8bit(band2_d, 2, 98).astype(np.float32) / 255.
                 band2_d = cv2.resize(band2_d, (label.shape[1], label.shape[0]))
                 bands2_stack.append(band2_d)
-            
-            for prior in pc[0]:
+
+            for prior in pc_priors[0]:
                 prior = cv2.resize(prior, (label.shape[1], label.shape[0]))
                 bands1_stack.append(prior)
-                
-            for prior in pc[1]:
+
+            for prior in pc_priors[1]:
                 prior = cv2.resize(prior, (label.shape[1], label.shape[0]))
                 bands2_stack.append(prior)
-            
+
             two_dates = np.asarray([bands1_stack, bands2_stack])
             two_dates = np.transpose(two_dates, (1,0,2,3))
             dataset[city] = {'images':two_dates , 'labels': label.astype(np.uint8)}
@@ -232,10 +230,10 @@ def full_onera_loader_with_pc_priors(path, bands):
 def full_buildings_loader(path):
     dates = os.listdir(path + 'Images/')
     dates.sort()
-    
+
     label_r = rasterio.open(path + 'Ground_truth/Changes/Changes_06_11.tif')
     label = label_r.read()[0]
-    
+
     stacked_dates = []
     for date in dates:
         r = rasterio.open(path + 'Images/' + date)
@@ -254,11 +252,10 @@ def full_buildings_loader(path):
         stacked_dates.append(bands)
 
     stacked_dates = np.asarray(stacked_dates).astype(np.float32).transpose(1,0,2,3)
-    
+
     print (stacked_dates.shape, label.shape)
     return {'images':stacked_dates, 'labels':label.astype(np.uint8)}
-        
-    
+
 
 def onera_loader(dataset, city, x, y, size):
     return dataset[city]['images'][:, : ,x:x+size, y:y+size], dataset[city]['labels'][x:x+size, y:y+size]
@@ -269,41 +266,42 @@ def onera_siamese_loader(dataset, city, x, y, size):
 
 def onera_siamese_loader_late_pooling(dataset, city, x, y, size):
     patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))
+
     p0 = patch[0]
     p1 = patch[1]
-    
+
     p0_cat1 = np.stack([p0[1],p0[2],p0[3],p0[7]])
     p1_cat1 = np.stack([p1[1],p1[2],p1[3],p1[7]])
-    
+
     p0_5 = cv2.resize(p0[4], (size//2,size//2))
     p0_6 = cv2.resize(p0[5], (size//2,size//2))
     p0_7 = cv2.resize(p0[6], (size//2,size//2))
     p0_8a = cv2.resize(p0[8], (size//2,size//2))
     p0_11 = cv2.resize(p0[10], (size//2,size//2))
     p0_12 = cv2.resize(p0[11], (size//2,size//2))
-    
+
     p1_5 = cv2.resize(p1[4], (size//2,size//2))
     p1_6 = cv2.resize(p1[5], (size//2,size//2))
     p1_7 = cv2.resize(p1[6], (size//2,size//2))
     p1_8a = cv2.resize(p1[8], (size//2,size//2))
     p1_11 = cv2.resize(p1[10], (size//2,size//2))
     p1_12 = cv2.resize(p1[11], (size//2,size//2))
-    
+
     p0_cat2 = np.stack([p0_5, p0_6, p0_6, p0_8a, p0_11, p0_12])
     p1_cat2 = np.stack([p1_5, p1_6, p1_6, p1_8a, p1_11, p1_12])
-    
+
     cat3_size = int(math.ceil(size/6))
     p0_1 = cv2.resize(p0[0], (cat3_size,cat3_size))
     p0_9 = cv2.resize(p0[9], (cat3_size,cat3_size))
     p0_10 = cv2.resize(p0[10], (cat3_size,cat3_size))
-    
+
     p1_1 = cv2.resize(p1[0], (cat3_size,cat3_size))
     p1_9 = cv2.resize(p1[9], (cat3_size,cat3_size))
     p1_10 = cv2.resize(p1[10], (cat3_size,cat3_size))
-    
+
     p0_cat3 = np.stack([p0_1, p0_9, p0_10])
     p1_cat3 = np.stack([p1_1, p1_9, p1_10])
-    
+
     return p0_cat1, p0_cat2, p0_cat3, p1_cat1, p1_cat2, p1_cat3, dataset[city]['labels'][x:x+size, y:y+size]
 
 def buildings_loader(dataset, x, y, size):

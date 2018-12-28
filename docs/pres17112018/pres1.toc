@@ -1,5 +1,0 @@
-\beamer@endinputifotherversion {3.36pt}
-\beamer@sectionintoc {1}{Problem Statement}{3}{0}{1}
-\beamer@sectionintoc {2}{Background}{5}{0}{2}
-\beamer@sectionintoc {3}{Dataset}{9}{0}{3}
-\beamer@sectionintoc {4}{Conclusions and Future Work}{14}{0}{4}
