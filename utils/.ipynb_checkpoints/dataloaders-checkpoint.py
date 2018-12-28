@@ -1,5 +1,5 @@
 import sys
-import os, csv, random
+import os, csv, random, math
 import glob
 
 import rasterio 
@@ -184,6 +184,51 @@ def full_onera_loader(path, bands):
 
     return dataset
 
+def full_onera_loader_with_pc_priors(path, bands):
+    cities = os.listdir(path + 'train_labels/')
+
+    dataset = {}
+    for city in cities:
+        if '.txt' not in city:
+            base_path1 = glob.glob(path + 'images/' + city + '/imgs_1/*.tif')[0][:-7]
+            base_path2 = glob.glob(path + 'images/' + city + '/imgs_2/*.tif')[0][:-7]
+            label = cv2.imread(path + 'train_labels/' + city + '/cm/' + 'cm.png', 0) / 255
+            pc = np.load(path + 'results/patch_classifier_' + city + '_probs.npy').astype(np.float32)
+            
+            bands1_stack = []
+            bands2_stack = []
+            for band in bands:
+                band1_r = rasterio.open(base_path1 + band + '.tif')
+                band1_d = band1_r.read()[0]
+                band2_r = rasterio.open(base_path2 + band + '.tif')
+                band2_d = band2_r.read()[0]
+                
+                band2_d = match_band(band2_d, band1_d)
+                
+                band1_d = stretch_8bit(band1_d, 2, 98).astype(np.float32)
+                band1_d = band1_d / 255
+                band1_d = cv2.resize(band1_d, (label.shape[1], label.shape[0]))
+                bands1_stack.append(band1_d)
+
+                band2_d = stretch_8bit(band2_d, 2, 98).astype(np.float32)
+                band2_d = band2_d / 255
+                band2_d = cv2.resize(band2_d, (label.shape[1], label.shape[0]))
+                bands2_stack.append(band2_d)
+            
+            for prior in pc[0]:
+                prior = cv2.resize(prior, (label.shape[1], label.shape[0]))
+                bands1_stack.append(prior)
+                
+            for prior in pc[1]:
+                prior = cv2.resize(prior, (label.shape[1], label.shape[0]))
+                bands2_stack.append(prior)
+            
+            two_dates = np.asarray([bands1_stack, bands2_stack])
+            two_dates = np.transpose(two_dates, (1,0,2,3))
+            dataset[city] = {'images':two_dates , 'labels': label.astype(np.uint8)}
+
+    return dataset
+
 def full_buildings_loader(path):
     dates = os.listdir(path + 'Images/')
     dates.sort()
@@ -221,6 +266,45 @@ def onera_loader(dataset, city, x, y, size):
 def onera_siamese_loader(dataset, city, x, y, size):
     patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))
     return patch[0], patch[1], dataset[city]['labels'][x:x+size, y:y+size]
+
+def onera_siamese_loader_late_pooling(dataset, city, x, y, size):
+    patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))
+    p0 = patch[0]
+    p1 = patch[1]
+    
+    p0_cat1 = np.stack([p0[1],p0[2],p0[3],p0[7]])
+    p1_cat1 = np.stack([p1[1],p1[2],p1[3],p1[7]])
+    
+    p0_5 = cv2.resize(p0[4], (size//2,size//2))
+    p0_6 = cv2.resize(p0[5], (size//2,size//2))
+    p0_7 = cv2.resize(p0[6], (size//2,size//2))
+    p0_8a = cv2.resize(p0[8], (size//2,size//2))
+    p0_11 = cv2.resize(p0[10], (size//2,size//2))
+    p0_12 = cv2.resize(p0[11], (size//2,size//2))
+    
+    p1_5 = cv2.resize(p1[4], (size//2,size//2))
+    p1_6 = cv2.resize(p1[5], (size//2,size//2))
+    p1_7 = cv2.resize(p1[6], (size//2,size//2))
+    p1_8a = cv2.resize(p1[8], (size//2,size//2))
+    p1_11 = cv2.resize(p1[10], (size//2,size//2))
+    p1_12 = cv2.resize(p1[11], (size//2,size//2))
+    
+    p0_cat2 = np.stack([p0_5, p0_6, p0_6, p0_8a, p0_11, p0_12])
+    p1_cat2 = np.stack([p1_5, p1_6, p1_6, p1_8a, p1_11, p1_12])
+    
+    cat3_size = int(math.ceil(size/6))
+    p0_1 = cv2.resize(p0[0], (cat3_size,cat3_size))
+    p0_9 = cv2.resize(p0[9], (cat3_size,cat3_size))
+    p0_10 = cv2.resize(p0[10], (cat3_size,cat3_size))
+    
+    p1_1 = cv2.resize(p1[0], (cat3_size,cat3_size))
+    p1_9 = cv2.resize(p1[9], (cat3_size,cat3_size))
+    p1_10 = cv2.resize(p1[10], (cat3_size,cat3_size))
+    
+    p0_cat3 = np.stack([p0_1, p0_9, p0_10])
+    p1_cat3 = np.stack([p1_1, p1_9, p1_10])
+    
+    return p0_cat1, p0_cat2, p0_cat3, p1_cat1, p1_cat2, p1_cat3, dataset[city]['labels'][x:x+size, y:y+size]
 
 def buildings_loader(dataset, x, y, size):
     return dataset['images'][:,:, x:x+size, y:y+size], dataset['labels'][x:x+size, y:y+size]
@@ -292,7 +376,7 @@ class ImagePreloader(data.Dataset):
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, csv_file, input_size, bands, loader):
+    def __init__(self, root, csv_file, input_size, full_load, loader):
 
         r = csv.reader(open(csv_file, 'r'), delimiter=',')
 
@@ -304,7 +388,7 @@ class OneraPreloader(data.Dataset):
 
         random.shuffle(images_list)
 
-        self.full_load = full_onera_loader(root, bands)
+        self.full_load = full_load
         self.input_size = input_size
         self.root = root
         self.imgs = images_list
@@ -320,9 +404,7 @@ class OneraPreloader(data.Dataset):
         """
         city, x, y = self.imgs[index]
 
-        img1, img2, target = self.loader(self.full_load, city, x, y, self.input_size)
-#         print (img.shape)
-        return img1, img2, target
+        return self.loader(self.full_load, city, x, y, self.input_size)
 
     def __len__(self):
         return len(self.imgs)
