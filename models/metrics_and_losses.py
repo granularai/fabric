@@ -38,16 +38,22 @@ class FocalLoss(nn.Module):
 
         return loss.mean()
 
-def get_loss(loss):
-    if loss[0] == 'dice':
+def get_loss(loss, weight_factor):
+    if loss == 'dice':
         print('dice')
         return dice_loss
-    elif loss[0] == 'focal':
+    elif loss == 'focal':
         print('focal')
-        return w(FocalLoss(loss[1]))
+        return FocalLoss(weight_factor)
     else:
         print('bce')
-        return w(nn.BCEWithLogitsLoss())
+        return nn.BCEWithLogitsLoss()
 
 def iou(mask1, mask2):
+    return np.sum(mask1 & mask2) / np.sum(mask1 | mask2)
+
+
+def get_iou(mask1, mask2):
+    if np.sum(mask1 & mask2) == 0:
+        return 0
     return np.sum(mask1 & mask2) / np.sum(mask1 | mask2)
