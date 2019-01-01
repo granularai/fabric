@@ -63,3 +63,6 @@ for city in cities:
                 dst = rasterio.open(data_path + city + '/cropped_safes/' + city_safe + '/' + band + '.jp2', 'w', **profile)
                 dst.write(band_out, 1)
                 dst.close()
+
+            break
+        break
