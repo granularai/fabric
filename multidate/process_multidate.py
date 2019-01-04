@@ -35,8 +35,9 @@ for city in cities:
         if 'S2A' in file_name:
             grid_name = file_name.split('_')[-2]
         else:
-            grid_name = file_name.split('_')[0]
-
+            grid_name = file_name.split('/')[-1].split('_')[0]
+        
+        print (grid_name)
         city_safes = glob.glob(safe_path + grid_name + '*.SAFE')
 
         source_bands = {}
@@ -47,40 +48,36 @@ for city in cities:
             if not os.path.exists(data_path + city + '/cropped_safes/' + city_safe.split('/')[-1]):
                 os.mkdir(data_path + city + '/cropped_safes/' + city_safe.split('/')[-1])
 
-            def process_safe(band):
-                base_name = glob.glob(city_safe + "/GRANULE/**/IMG_DATA/**.jp2")[0][:-7]
-                s2b_r = rasterio.open(base_name + band + '.jp2')
-                s2b = s2b_r.read()[0]
+                def process_safe(band):
+                    base_name = glob.glob(city_safe + "/GRANULE/**/IMG_DATA/**.jp2")[0][:-7]
+                    s2b_r = rasterio.open(base_name + band + '.jp2')
+                    s2b = s2b_r.read()[0]
 
-                affine = source_bands[band].transform
-                s2affine = s2b_r.transform
+                    affine = source_bands[band].transform
+                    s2affine = s2b_r.transform
 
-                inProj = Proj(**source_bands[band].crs)
-                outProj = Proj(**s2b_r.crs, preserve_units=True)
+                    inProj = Proj(**source_bands[band].crs)
+                    outProj = Proj(**s2b_r.crs, preserve_units=True)
 
-                band_out = np.zeros((source_bands[band].shape[0],source_bands[band].shape[1]))
+                    band_out = np.zeros((source_bands[band].shape[0],source_bands[band].shape[1]))
 
-                for i in range(source_bands[band].shape[0]):
-                    for j in range(source_bands[band].shape[1]):
-                        x,y = get_pix_from_s2(inProj, outProj, affine, s2affine, source_bands[band].shape[1]-j,source_bands[band].shape[0]-i)
-            #                         print (i,j,x,y)
-                        band_out[i,j] = s2b[int(round(y)),int(round(x))]
-
-
-                band_out = ndimage.rotate(band_out, 180)
-
-                profile = source_bands[band].profile
-                dst = rasterio.open(data_path + city + '/cropped_safes/' + city_safe.split('/')[-1] + '/' + band + '.tif', 'w', **profile)
-                dst.write(band_out.astype(np.uint16), 1)
-                dst.close()
-
-            pool = Pool(13)
-            pool.map(process_safe, bands)
+                    for i in range(source_bands[band].shape[0]):
+                        for j in range(source_bands[band].shape[1]):
+                            x,y = get_pix_from_s2(inProj, outProj, affine, s2affine, source_bands[band].shape[1]-j,source_bands[band].shape[0]-i)
+                #                         print (i,j,x,y)
+                            band_out[i,j] = s2b[int(round(y)),int(round(x))]
 
 
+                    band_out = ndimage.rotate(band_out, 180)
 
+                    profile = source_bands[band].profile
+                    dst = rasterio.open(data_path + city + '/cropped_safes/' + city_safe.split('/')[-1] + '/' + band + '.tif', 'w', **profile)
+                    dst.write(band_out.astype(np.uint16), 1)
+                    dst.close()
+                    s2b_r.close()
 
+                pool = Pool(13)
+                pool.map(process_safe, bands)
+                pool.close()
+                pool.join()
 
-
-
-            break
