@@ -1,5 +1,5 @@
 import sys
-import os, csv, random, math
+import os, csv, random, math, json
 import glob
 
 import rasterio
@@ -227,6 +227,45 @@ def full_onera_loader_with_pc_priors(path, bands):
 
     return dataset
 
+def full_onera_multidate_loader(path, bands):
+    fin = open(path + 'multidate_metadata.json','r')
+    metadata = json.load(fin)
+    fin.close()
+    
+    cities = os.listdir(path + 'train_labels/')
+
+    dataset = {}
+    for city in cities:
+        if city in metadata:
+            dates_stack = []
+            label = cv2.imread(path + 'train_labels/' + city + '/cm/' + 'cm.png', 0) / 255
+            
+            first_date = True
+            for date_no in range(5):
+                bands_stack = []
+                base_path = glob.glob(metadata[city][str(date_no)] + '/*.tif')[0][:-7]
+                
+                for band_no in range(len(bands)):
+                    band_r = rasterio.open(base_path + bands[band_no] + '.tif')
+                    band_d = band_r.read()[0]
+                    
+                    if not first_date:
+                        band_d = match_band(band_d, dates_stack[0][band_no])
+
+                    band_d = stretch_8bit(band_d, 2, 98).astype(np.float32) / 255.
+                    band_d = cv2.resize(band_d, (label.shape[1], label.shape[0]))
+                    bands_stack.append(band_d)
+                
+                if not first_date:
+                    first_date = False
+                    
+                dates_stack.append(bands_stack)
+
+            dates_stack = np.asarray(dates_stack).transpose(1,0,2,3)
+            dataset[city] = {'images':dates_stack , 'labels': label.astype(np.uint8)}
+
+    return dataset
+
 def full_buildings_loader(path):
     dates = os.listdir(path + 'Images/')
     dates.sort()
@@ -258,7 +297,8 @@ def full_buildings_loader(path):
 
 
 def onera_loader(dataset, city, x, y, size):
-    return dataset[city]['images'][:, : ,x:x+size, y:y+size], dataset[city]['labels'][x:x+size, y:y+size]
+    out_img = np.rot90(dataset[city]['images'][:, : ,x:x+size, y:y+size], random.randint(0,3), [2,3])
+    return out_img, dataset[city]['labels'][x:x+size, y:y+size]
 
 def onera_siamese_loader(dataset, city, x, y, size):
     patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))

@@ -1,6 +1,8 @@
-import glob
-import cv2
+import sys, glob, cv2, random, math
 import numpy as np
+import pandas as pd
+from tqdm import tqdm_notebook as tqdm
+
 import torch
 import torch.utils.data
 import torch.nn as nn
@@ -9,48 +11,48 @@ import torch.optim as optim
 import torch.autograd as autograd
 from torch.autograd import Variable
 from torchvision import datasets, models, transforms
-import random
-import pandas as pd
-import math
-from tqdm import tqdm_notebook as tqdm
-from utils.dataloaders import OneraPreloader, onera_siamese_loader, full_onera_loader
 
-DROPOUT = 0.5
+sys.path.append('../utils')
+sys.path.append('../models')
+from dataloaders import *
+from unet_blocks import *
+from metrics_and_losses import *
 
 USE_CUDA = torch.cuda.is_available()
-
+DEVICE = 0
 def w(v):
     if USE_CUDA:
-        return v.cuda()
+        return v.cuda(DEVICE)
     return v
 
-epochs = 100
-batch_size = 128
-input_size = 32
-layers = 5
+epochs = 200
+batch_size = 64
+input_size = 64
+layers = 6
 lr = 0.01
-init_filters = 64
+init_filters = 32
 loss_func = 'focal'
-init_val = 0.022826975609355593
-bands = ['B01','B02', 'B03', 'B04','B05','B06','B07','B08','B8A','B09','B10','B11','B12']
-data_dir = '../datasets/onera/'
-weights_dir = '../weights/onera/'
-train_csv = '../datasets/onera/train.csv'
-test_csv = '../datasets/onera/test.csv'
+weight_factor = 2
+# bands = ['B01','B02', 'B03', 'B04','B05','B06','B07','B08','B8A','B09','B10','B11','B12']
+bands = ['B02', 'B03', 'B04','B08']
+data_dir = '../../datasets/onera/'
+weight_path = '../../weights/onera/unet_siamese_prod_relu_inp64_4band_2dates_focal_6layers_1e-3lr_hm_cnc_all_14_cities.pt'
+train_csv = '../../datasets/onera/train_64x64.csv'
+test_csv = '../../datasets/onera/test_64x64.csv'
 
-net = w(UNetClassify(layers=layers, init_filters=init_filters, init_val=init_val))
-weights = torch.load('../weights/onera/unet_siamese_prod_relu_inp32_13band_2dates_focal_hm_cnc_all_14_cities.pt')
-net.load_state_dict(weights)
+net = w(UNetClassify(layers=layers, init_filters=init_filters, num_channels=4, fusion_method='mul'))
+# weights = torch.load('../../weights/onera/unet_siamese_prod_relu_inp64_13band_2dates_focal_7layers_hm_cnc_all_14_cities.pt')
+# net.load_state_dict(weights)
 
-criterion = get_loss(loss_func)
+criterion = get_loss(loss_func, weight_factor)
 optimizer = optim.Adam(net.parameters(), lr=lr)
 
 full_load = full_onera_loader(data_dir, bands)
 train_dataset = OneraPreloader(data_dir , train_csv, input_size, full_load, onera_siamese_loader)
-train = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+train = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
 
 test_dataset = OneraPreloader(data_dir , test_csv, input_size, full_load, onera_siamese_loader)
-test = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+test = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
 
 best_iou = -1.0
 best_net_dict = None
@@ -64,7 +66,7 @@ for epoch in tqdm(range(epochs)):
         batch_img1 = w(autograd.Variable(batch_img1))
         batch_img2 = w(autograd.Variable(batch_img2))
         labels = w(autograd.Variable(labels))
-
+        
         optimizer.zero_grad()
         output = net(batch_img1, batch_img2)
         loss = criterion(output, labels.view(-1,1,input_size,input_size).float())
@@ -72,6 +74,7 @@ for epoch in tqdm(range(epochs)):
         train_losses.append(loss.item())
 
         optimizer.step()
+        torch.cuda.empty_cache()
     print('train loss', np.mean(train_losses))
 
     optimizer.zero_grad()
@@ -96,8 +99,6 @@ for epoch in tqdm(range(epochs)):
     if cur_iou > best_iou or (cur_iou == best_iou and np.mean(losses) < best_loss):
         best_iou = cur_iou
         best_epoch = epoch
-        import copy
-        best_net_dict = copy.deepcopy(net.state_dict())
         best_loss = np.mean(losses)
-        torch.save(best_net_dict, '../weights/onera/unet_siamese_prod_relu_inp32_13band_2dates_' + loss_func + '_hm_cnc_all_14_cities.pt')
+        torch.save(net.state_dict(), weight_path)
     print(np.mean(losses), np.mean(iou), best_loss, best_iou)

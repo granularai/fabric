@@ -20,7 +20,7 @@ from unet_blocks import *
 from metrics_and_losses import *
 
 USE_CUDA = torch.cuda.is_available()
-DEVICE = 2
+DEVICE = 1
 def w(v):
     if USE_CUDA:
         return v.cuda(DEVICE)
@@ -60,11 +60,11 @@ class UNetDownBlock(UNetBlock):
         if pooling:
             self.pool = nn.MaxPool2d(2)
             self.recurrent_weights = nn.Parameter(torch.Tensor(filters_out, input_size//2, input_size//2))
-            self.recurrent_activation = nn.Tanh()
+            self.recurrent_activation = nn.ReLU()
         else:
             self.pool = lambda x: x
             self.recurrent_weights = nn.Parameter(torch.Tensor(filters_out, input_size, input_size))
-            self.recurrent_activation = nn.Tanh()
+            self.recurrent_activation = nn.ReLU()
 
     def forward(self, xinp):
         if self.pooling:
@@ -161,19 +161,21 @@ class UNetClassify(UNet):
 
 weight_factor = 0.023
 epochs = 100
-batch_size = 128
-input_size = 32
-layers = 4
+batch_size = 64
+input_size = 64
+layers = 6
 lr = 0.01
 init_filters = 32
 loss_func = 'focal'
 bands = ['B01','B02', 'B03', 'B04','B05','B06','B07','B08','B8A','B09','B10','B11','B12']
 data_dir = '../../datasets/onera/'
-weight_path = '../../weights/onera/unet_recurrent_relu_inp32_13band_5dates_' + loss_func + '_hm_cnc_all_14_cities.pt'
-train_csv = '../../datasets/onera/train.csv'
-test_csv = '../../datasets/onera/test.csv'
+weight_path = '../../weights/onera/unet_recurrent_relu_inp64_13band_5dates_' + loss_func + '_hm_cnc_all_14_cities.pt'
+train_csv = '../../datasets/onera/train_all_64x64.csv'
+test_csv = '../../datasets/onera/test_64x64.csv'
 
 net = w(UNetClassify(input_size=input_size, layers=layers, init_filters=init_filters))
+# weights = torch.load(weight_path)
+# net.load_state_dict(weights)
 
 criterion = get_loss(loss_func, weight_factor)
 optimizer = optim.Adam(net.parameters(), lr=lr)
