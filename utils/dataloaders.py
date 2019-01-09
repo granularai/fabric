@@ -148,6 +148,31 @@ def npy_seq_loader(seq):
 
     return out
 
+def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
+    cities = os.listdir(data_dir + 'train_labels/')
+    cities.sort()
+    val_cities = map(int, val_cities.split(','))
+    train_cities = list(set(range(len(cities))).intersection(val_cities))
+
+    train_metadata = []
+    for city_no in train_cities:
+        city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
+
+        for i in range(0, city_label.shape[0], stride):
+            for j in range(0, city_label.shape[1], stride):
+                if i + patch_size <= city_label.shape[0] and j + patch_size <= city_label.shape[1]:
+                    train_metadata.append([cities[city_no], i, j])
+
+    val_metadata = []
+    for city_no in val_cities:
+        city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
+        for i in range(0, city_label.shape[0], patch_size):
+            for j in range(0, city_label.shape[1], patch_size):
+                if i + patch_size <= city_label.shape[0] and j + patch_size <= city_label.shape[1]:
+                    val_metadata.append([cities[city_no], i, j])
+
+    return train_metadata, val_metadata
+
 def full_onera_loader(path, bands):
     cities = os.listdir(path + 'train_labels/')
 
@@ -231,7 +256,7 @@ def full_onera_multidate_loader(path, bands):
     fin = open(path + 'multidate_metadata.json','r')
     metadata = json.load(fin)
     fin.close()
-    
+
     cities = os.listdir(path + 'train_labels/')
 
     dataset = {}
@@ -239,26 +264,26 @@ def full_onera_multidate_loader(path, bands):
         if city in metadata:
             dates_stack = []
             label = cv2.imread(path + 'train_labels/' + city + '/cm/' + 'cm.png', 0) / 255
-            
+
             first_date = True
             for date_no in range(5):
                 bands_stack = []
                 base_path = glob.glob(metadata[city][str(date_no)] + '/*.tif')[0][:-7]
-                
+
                 for band_no in range(len(bands)):
                     band_r = rasterio.open(base_path + bands[band_no] + '.tif')
                     band_d = band_r.read()[0]
-                    
+
                     if not first_date:
                         band_d = match_band(band_d, dates_stack[0][band_no])
 
                     band_d = stretch_8bit(band_d, 2, 98).astype(np.float32) / 255.
                     band_d = cv2.resize(band_d, (label.shape[1], label.shape[0]))
                     bands_stack.append(band_d)
-                
+
                 if not first_date:
                     first_date = False
-                    
+
                 dates_stack.append(bands_stack)
 
             dates_stack = np.asarray(dates_stack).transpose(1,0,2,3)
@@ -414,22 +439,13 @@ class ImagePreloader(data.Dataset):
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, csv_file, input_size, full_load, loader):
-
-        r = csv.reader(open(csv_file, 'r'), delimiter=',')
-
-        images_list = []
-
-        for row in r:
-            images_list.append([row[0], int(row[1]), int(row[2])])
-
-
-        random.shuffle(images_list)
+    def __init__(self, root, metadata, input_size, full_load, loader):
+        random.shuffle(metadata)
 
         self.full_load = full_load
         self.input_size = input_size
         self.root = root
-        self.imgs = images_list
+        self.imgs = metadata
         self.loader = loader
 
     def __getitem__(self, index):
