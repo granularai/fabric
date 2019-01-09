@@ -321,8 +321,15 @@ def full_buildings_loader(path):
     return {'images':stacked_dates, 'labels':label.astype(np.uint8)}
 
 
-def onera_loader(dataset, city, x, y, size):
-    out_img = np.rot90(dataset[city]['images'][:, : ,x:x+size, y:y+size], random.randint(0,3), [2,3])
+def onera_loader(dataset, city, x, y, size, aug):
+    out_img = dataset[city]['images'][:, : ,x:x+size, y:y+size]
+    if aug:
+        out_img = np.rot90(out_img, random.randint(0,3), [2,3])
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=2)
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=2)
+
     return out_img, dataset[city]['labels'][x:x+size, y:y+size]
 
 def onera_siamese_loader(dataset, city, x, y, size):
@@ -439,7 +446,7 @@ class ImagePreloader(data.Dataset):
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, metadata, input_size, full_load, loader):
+    def __init__(self, root, metadata, input_size, full_load, loader, aug=False):
         random.shuffle(metadata)
 
         self.full_load = full_load
@@ -447,6 +454,7 @@ class OneraPreloader(data.Dataset):
         self.root = root
         self.imgs = metadata
         self.loader = loader
+        self.aug = aug
 
     def __getitem__(self, index):
         """
@@ -458,7 +466,7 @@ class OneraPreloader(data.Dataset):
         """
         city, x, y = self.imgs[index]
 
-        return self.loader(self.full_load, city, x, y, self.input_size)
+        return self.loader(self.full_load, city, x, y, self.input_size, self.aug)
 
     def __len__(self):
         return len(self.imgs)

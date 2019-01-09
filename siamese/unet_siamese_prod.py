@@ -81,7 +81,7 @@ else:
 
 train_metadata, val_metadata = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
 full_load = full_onera_loader(opt.data_dir, bands)
-train_dataset = OneraPreloader(opt.data_dir , train_metadata, opt.patch_size, full_load, onera_siamese_loader)
+train_dataset = OneraPreloader(opt.data_dir , train_metadata, opt.patch_size, full_load, onera_siamese_loader, opt.augmentation)
 train = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
 val_dataset = OneraPreloader(opt.data_dir , val_metadata, opt.patch_size, full_load, onera_siamese_loader)
 val = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
@@ -116,7 +116,7 @@ for epoch in tqdm(range(opt.epochs)):
 
         optimizer.step()
         torch.cuda.empty_cache()
-    
+
     train_loss = np.mean(train_losses)
     print('train loss', train_loss)
 
@@ -131,13 +131,13 @@ for epoch in tqdm(range(opt.epochs)):
         labels = w(autograd.Variable(labels_true))
         batch_img1 = w(autograd.Variable(batch_img1))
         batch_img2 = w(autograd.Variable(batch_img2))
-        
+
         output = net(batch_img1, batch_img2)
         loss = criterion(output, labels.view(-1, 1, opt.patch_size, opt.patch_size).float())
-        
+
         losses += [loss.item()] * batch_size
         result = (F.sigmoid(output).data.cpu().numpy() > 0.5)
-        
+
         for label, res in zip(labels_true, result):
             label = label.cpu().numpy()[:, :] > 0.5
             iou.append(get_iou(label, res))
@@ -157,7 +157,7 @@ for epoch in tqdm(range(opt.epochs)):
     mean_iou = np.mean(iou)
     print('val loss', mean_loss, 'epoch iou', mean_iou, 'best loss', best_loss, 'best iou', best_iou)
     print (stats)
-    
+
     fout.write('\n')
     fout.write('epoch: ' + str(epoch))
     fout.write('\n')
@@ -167,5 +167,5 @@ for epoch in tqdm(range(opt.epochs)):
     fout.write('\n')
     fout.write(stats)
     fout.write('\n')
-    
+
 fout.close()
