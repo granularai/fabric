@@ -148,6 +148,31 @@ def npy_seq_loader(seq):
 
     return out
 
+def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
+    cities = os.listdir(data_dir + 'train_labels/')
+    cities.sort()
+    val_cities = list(map(int, val_cities.split(',')))
+    train_cities = list(set(range(len(cities))).difference(val_cities))
+
+    train_metadata = []
+    for city_no in train_cities:
+        city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
+
+        for i in range(0, city_label.shape[0], stride):
+            for j in range(0, city_label.shape[1], stride):
+                if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
+                    train_metadata.append([cities[city_no], i, j])
+
+    val_metadata = []
+    for city_no in val_cities:
+        city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
+        for i in range(0, city_label.shape[0], patch_size):
+            for j in range(0, city_label.shape[1], patch_size):
+                if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
+                    val_metadata.append([cities[city_no], i, j])
+
+    return train_metadata, val_metadata
+
 def full_onera_loader(path, bands):
     cities = os.listdir(path + 'train_labels/')
 
@@ -231,7 +256,7 @@ def full_onera_multidate_loader(path, bands):
     fin = open(path + 'multidate_metadata.json','r')
     metadata = json.load(fin)
     fin.close()
-    
+
     cities = os.listdir(path + 'train_labels/')
 
     dataset = {}
@@ -239,26 +264,26 @@ def full_onera_multidate_loader(path, bands):
         if city in metadata:
             dates_stack = []
             label = cv2.imread(path + 'train_labels/' + city + '/cm/' + 'cm.png', 0) / 255
-            
+
             first_date = True
             for date_no in range(5):
                 bands_stack = []
                 base_path = glob.glob(metadata[city][str(date_no)] + '/*.tif')[0][:-7]
-                
+
                 for band_no in range(len(bands)):
                     band_r = rasterio.open(base_path + bands[band_no] + '.tif')
                     band_d = band_r.read()[0]
-                    
+
                     if not first_date:
                         band_d = match_band(band_d, dates_stack[0][band_no])
 
                     band_d = stretch_8bit(band_d, 2, 98).astype(np.float32) / 255.
                     band_d = cv2.resize(band_d, (label.shape[1], label.shape[0]))
                     bands_stack.append(band_d)
-                
+
                 if not first_date:
                     first_date = False
-                    
+
                 dates_stack.append(bands_stack)
 
             dates_stack = np.asarray(dates_stack).transpose(1,0,2,3)
@@ -296,13 +321,35 @@ def full_buildings_loader(path):
     return {'images':stacked_dates, 'labels':label.astype(np.uint8)}
 
 
-def onera_loader(dataset, city, x, y, size):
-    out_img = np.rot90(dataset[city]['images'][:, : ,x:x+size, y:y+size], random.randint(0,3), [2,3])
+def onera_loader(dataset, city, x, y, size, aug):
+    out_img = dataset[city]['images'][:, : ,x:x+size, y:y+size]
+    if aug:
+        out_img = np.rot90(out_img, random.randint(0,3), [2,3])
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=2)
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=2)
+
     return out_img, dataset[city]['labels'][x:x+size, y:y+size]
 
-def onera_siamese_loader(dataset, city, x, y, size):
-    patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))
-    return patch[0], patch[1], dataset[city]['labels'][x:x+size, y:y+size]
+def onera_siamese_loader(dataset, city, x, y, size, aug):
+    out_img = np.copy(dataset[city]['images'][:, : ,x:x+size, y:y+size])
+    out_lbl = np.copy(dataset[city]['labels'][x:x+size, y:y+size])
+    if aug:
+        rot_deg = random.randint(0,3)
+        out_img = np.rot90(out_img, rot_deg, [2,3]).copy()
+        out_lbl = np.rot90(out_lbl, rot_deg, [0,1]).copy()
+        
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=2).copy()
+            out_lbl = np.flip(out_lbl, axis=0).copy()
+            
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=3).copy()
+            out_lbl = np.flip(out_lbl, axis=1).copy()
+            
+    out_img = np.transpose(out_img, (1,0,2,3))
+    return out_img[0], out_img[1], out_lbl
 
 def onera_siamese_loader_late_pooling(dataset, city, x, y, size):
     patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))
@@ -414,23 +461,15 @@ class ImagePreloader(data.Dataset):
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, csv_file, input_size, full_load, loader):
-
-        r = csv.reader(open(csv_file, 'r'), delimiter=',')
-
-        images_list = []
-
-        for row in r:
-            images_list.append([row[0], int(row[1]), int(row[2])])
-
-
-        random.shuffle(images_list)
+    def __init__(self, root, metadata, input_size, full_load, loader, aug=False):
+        random.shuffle(metadata)
 
         self.full_load = full_load
         self.input_size = input_size
         self.root = root
-        self.imgs = images_list
+        self.imgs = metadata
         self.loader = loader
+        self.aug = aug
 
     def __getitem__(self, index):
         """
@@ -442,7 +481,7 @@ class OneraPreloader(data.Dataset):
         """
         city, x, y = self.imgs[index]
 
-        return self.loader(self.full_load, city, x, y, self.input_size)
+        return self.loader(self.full_load, city, x, y, self.input_size, self.aug)
 
     def __len__(self):
         return len(self.imgs)

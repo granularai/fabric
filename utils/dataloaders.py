@@ -151,8 +151,8 @@ def npy_seq_loader(seq):
 def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
     cities = os.listdir(data_dir + 'train_labels/')
     cities.sort()
-    val_cities = map(int, val_cities.split(','))
-    train_cities = list(set(range(len(cities))).intersection(val_cities))
+    val_cities = list(map(int, val_cities.split(',')))
+    train_cities = list(set(range(len(cities))).difference(val_cities))
 
     train_metadata = []
     for city_no in train_cities:
@@ -160,7 +160,7 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
 
         for i in range(0, city_label.shape[0], stride):
             for j in range(0, city_label.shape[1], stride):
-                if i + patch_size <= city_label.shape[0] and j + patch_size <= city_label.shape[1]:
+                if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
                     train_metadata.append([cities[city_no], i, j])
 
     val_metadata = []
@@ -168,7 +168,7 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
         city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
         for i in range(0, city_label.shape[0], patch_size):
             for j in range(0, city_label.shape[1], patch_size):
-                if i + patch_size <= city_label.shape[0] and j + patch_size <= city_label.shape[1]:
+                if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
                     val_metadata.append([cities[city_no], i, j])
 
     return train_metadata, val_metadata
@@ -332,9 +332,24 @@ def onera_loader(dataset, city, x, y, size, aug):
 
     return out_img, dataset[city]['labels'][x:x+size, y:y+size]
 
-def onera_siamese_loader(dataset, city, x, y, size):
-    patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))
-    return patch[0], patch[1], dataset[city]['labels'][x:x+size, y:y+size]
+def onera_siamese_loader(dataset, city, x, y, size, aug):
+    out_img = np.copy(dataset[city]['images'][:, : ,x:x+size, y:y+size])
+    out_lbl = np.copy(dataset[city]['labels'][x:x+size, y:y+size])
+    if aug:
+        rot_deg = random.randint(0,3)
+        out_img = np.rot90(out_img, rot_deg, [2,3]).copy()
+        out_lbl = np.rot90(out_lbl, rot_deg, [0,1]).copy()
+        
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=2).copy()
+            out_lbl = np.flip(out_lbl, axis=0).copy()
+            
+        if random.random() > 0.5:
+            out_img = np.flip(out_img, axis=3).copy()
+            out_lbl = np.flip(out_lbl, axis=1).copy()
+            
+    out_img = np.transpose(out_img, (1,0,2,3))
+    return out_img[0], out_img[1], out_lbl
 
 def onera_siamese_loader_late_pooling(dataset, city, x, y, size):
     patch = np.transpose(dataset[city]['images'][:, : ,x:x+size, y:y+size], (1,0,2,3))

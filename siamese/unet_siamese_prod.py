@@ -33,9 +33,9 @@ parser.add_argument('--batch_size', type=int, default=128, required=False, help=
 parser.add_argument('--init_filters', type=int, default=32, required=False, help='initial filter size of unet')
 parser.add_argument('--bands', type=int, default=13, required=False, help='number of bands to use as input 4:[B02, B03, B04, B08] or 13:All bands')
 parser.add_argument('--loss_func', default='focal', required=False, help='Loss function to use for training, bce, dice, focal')
-parser.add_argument('--weight_factor', type=int, default=None, required=True, help='if focal loss is used pass gamma')
+parser.add_argument('--weight_factor', type=float, default=None, required=True, help='if focal loss is used pass gamma')
 parser.add_argument('--fusion_method', default='mul', required=False, help='fusion of two dates, cat, add, mul, sub, div')
-parser.add_argument('--lr', default=0.01, required=False, help='Learning rate')
+parser.add_argument('--lr', type=float, default=0.01, required=False, help='Learning rate')
 
 parser.add_argument('--val_cities', default='0,1', required=False, help='''cities to use for validation,
                             0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, 5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai,
@@ -87,7 +87,8 @@ val_dataset = OneraPreloader(opt.data_dir , val_metadata, opt.patch_size, full_l
 val = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
 
 fout.write('\n')
-fout.write('train samples:' + str(len(train)) + ' val samples:' + str(len(val)))
+print ('train samples:' + str(len(train_metadata)) + ' val samples:' + str(len(val_metadata)))
+fout.write('train samples:' + str(len(train_metadata)) + ' val samples:' + str(len(val_metadata)))
 fout.write('\n')
 
 net = w(UNetClassify(layers=opt.layers, init_filters=opt.init_filters, num_channels=opt.bands, fusion_method=opt.fusion_method))
@@ -135,7 +136,7 @@ for epoch in tqdm(range(opt.epochs)):
         output = net(batch_img1, batch_img2)
         loss = criterion(output, labels.view(-1, 1, opt.patch_size, opt.patch_size).float())
 
-        losses += [loss.item()] * batch_size
+        losses += [loss.item()] * opt.batch_size
         result = (F.sigmoid(output).data.cpu().numpy() > 0.5)
 
         for label, res in zip(labels_true, result):
@@ -163,7 +164,7 @@ for epoch in tqdm(range(opt.epochs)):
     fout.write('\n')
     fout.write('train loss:' + str(train_loss))
     fout.write('\n')
-    fout.write('val loss:' + str(mean_loss), ' epoch iou:', str(mean_iou) + ' best loss:' + str(best_loss) + ' best iou:' + str(best_iou))
+    fout.write('val loss:' + str(mean_loss) + ' epoch iou:' + str(mean_iou) + ' best loss:' + str(best_loss) + ' best iou:' + str(best_iou))
     fout.write('\n')
     fout.write(stats)
     fout.write('\n')

@@ -44,7 +44,7 @@ class UNetUpBlock(UNetBlock):
         self.upnorm = nn.BatchNorm2d(filters_in // 2)
 
     def forward(self, x, x_combd):
-        x = F.upsample(x, size=x_combd.size()[-2:], mode='bilinear')
+        x = F.upsample(x, size=x_combd.size()[-2:], mode='bilinear', align_corners=True)
         x = self.upnorm(self.activation(self.upconv(x)))
         x = torch.cat((x, x_combd), 1)
         return super().forward(x)
