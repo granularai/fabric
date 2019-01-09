@@ -2,7 +2,7 @@ import sys, glob, cv2, random, math, argparse
 import numpy as np
 import pandas as pd
 from tqdm import tqdm_notebook as tqdm
-from sklearn.metrics import classification _report
+from sklearn.metrics import classification_report
 
 import torch
 import torch.utils.data
@@ -33,8 +33,8 @@ parser.add_argument('--batch_size', type=int, default=128, required=False, help=
 parser.add_argument('--init_filters', type=int, default=32, required=False, help='initial filter size of unet')
 parser.add_argument('--bands', type=int, default=13, required=False, help='number of bands to use as input 4:[B02, B03, B04, B08] or 13:All bands')
 parser.add_argument('--loss_func', default='focal', required=False, help='Loss function to use for training, bce, dice, focal')
-parser.add_argument('--weight_factor', default=1.5, required=False, help='if focal loss is used pass gamma')
-parser.add_argument('--fusion', default='mul', required=False, help='fusion of two dates, cat, add, mul, sub, div')
+parser.add_argument('--weight_factor', type=int, default=None, required=True, help='if focal loss is used pass gamma')
+parser.add_argument('--fusion_method', default='mul', required=False, help='fusion of two dates, cat, add, mul, sub, div')
 parser.add_argument('--lr', default=0.01, required=False, help='Learning rate')
 
 parser.add_argument('--val_cities', default='0,1', required=False, help='''cities to use for validation,
@@ -61,6 +61,16 @@ def w(v):
 #5. args handling
 ###############################
 
+file_string = 'unet_siamese_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + '_aug_' + str(opt.augmentation) + '_layers_' + str(opt.layers) +\
+                '_batchSize_' + str(opt.batch_size) + '_initFilters_' + str(opt.init_filters) + '_bands_' + str(opt.bands) + '_lossFunc_' + str(opt.loss_func) + '_gamma_' + \
+    str(opt.weight_factor) + '_fusionMethod_' + str(opt.fusion_method) + '_lr_' + str(opt.lr) + '_valCities_' + str(opt.val_cities)
+
+weight_path = opt.weight_dir + file_string + '.pt'
+log_path = opt.log_dir + file_string + '.log'
+
+fout = open(log_path, 'w')
+fout.write(str(opt))
+
 if opt.bands==13:
     bands = ['B01','B02','B03','B04','B05','B06','B07','B08','B8A','B09','B10','B11','B12']
 elif opt.bands==4:
@@ -75,6 +85,10 @@ train_dataset = OneraPreloader(opt.data_dir , train_metadata, opt.patch_size, fu
 train = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
 val_dataset = OneraPreloader(opt.data_dir , val_metadata, opt.patch_size, full_load, onera_siamese_loader)
 val = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
+
+fout.write('\n')
+fout.write('train samples:' + str(len(train)) + ' val samples:' + str(len(val)))
+fout.write('\n')
 
 net = w(UNetClassify(layers=opt.layers, init_filters=opt.init_filters, num_channels=opt.bands, fusion_method=opt.fusion_method))
 
@@ -96,13 +110,15 @@ for epoch in tqdm(range(opt.epochs)):
 
         optimizer.zero_grad()
         output = net(batch_img1, batch_img2)
-        loss = criterion(output, labels.view(-1,1,input_size,input_size).float())
+        loss = criterion(output, labels.view(-1, 1, opt.patch_size, opt.patch_size).float())
         loss.backward()
         train_losses.append(loss.item())
 
         optimizer.step()
         torch.cuda.empty_cache()
-    print('train loss', np.mean(train_losses))
+    
+    train_loss = np.mean(train_losses)
+    print('train loss', train_loss)
 
     optimizer.zero_grad()
     net.eval()
@@ -111,14 +127,17 @@ for epoch in tqdm(range(opt.epochs)):
     gts = []
     preds = []
 
-    for batch_img1, batch_img2, labels_true in test:
+    for batch_img1, batch_img2, labels_true in val:
         labels = w(autograd.Variable(labels_true))
         batch_img1 = w(autograd.Variable(batch_img1))
         batch_img2 = w(autograd.Variable(batch_img2))
+        
         output = net(batch_img1, batch_img2)
-        loss = criterion(output, labels.view(-1,1,input_size,input_size).float())
+        loss = criterion(output, labels.view(-1, 1, opt.patch_size, opt.patch_size).float())
+        
         losses += [loss.item()] * batch_size
         result = (F.sigmoid(output).data.cpu().numpy() > 0.5)
+        
         for label, res in zip(labels_true, result):
             label = label.cpu().numpy()[:, :] > 0.5
             iou.append(get_iou(label, res))
@@ -134,5 +153,19 @@ for epoch in tqdm(range(opt.epochs)):
         best_loss = np.mean(losses)
         torch.save(net.state_dict(), weight_path)
 
-    print('val loss', np.mean(losses), 'epoch iou', np.mean(iou), 'best loss', best_loss, 'best iou', best_iou)
+    mean_loss = np.mean(losses)
+    mean_iou = np.mean(iou)
+    print('val loss', mean_loss, 'epoch iou', mean_iou, 'best loss', best_loss, 'best iou', best_iou)
     print (stats)
+    
+    fout.write('\n')
+    fout.write('epoch: ' + str(epoch))
+    fout.write('\n')
+    fout.write('train loss:' + str(train_loss))
+    fout.write('\n')
+    fout.write('val loss:' + str(mean_loss), ' epoch iou:', str(mean_iou) + ' best loss:' + str(best_loss) + ' best iou:' + str(best_iou))
+    fout.write('\n')
+    fout.write(stats)
+    fout.write('\n')
+    
+fout.close()
