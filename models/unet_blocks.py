@@ -3,7 +3,7 @@ import torch.utils.data
 import torch.nn as nn
 import torch.nn.functional as F
 
-DROPOUT = 0.0
+DROPOUT = 0.5
 
 class UNetBlock(nn.Module):
     def __init__(self, filters_in, filters_out):

@@ -19,6 +19,7 @@ from dataloaders import *
 from unet_blocks import *
 from metrics_and_losses import *
 
+#python3 unet_siamese_prod.py --data_dir='../../datasets/onera/' --weight_dir='../../weights/onera/' --log_dir='../../logs/onera/' --gpu_id=7 --patch_size=122 --batch_size=32 --num_workers=8 --layers=5 --loss_func='dice' --lr=0.01 --stride=61
 parser = argparse.ArgumentParser(description='Siamese Change Detection network training')
 
 parser.add_argument('--gpu_id', type=int, default=0, required=False, help='gpu to use for training')
@@ -82,9 +83,9 @@ else:
 train_metadata, val_metadata = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
 full_load = full_onera_loader(opt.data_dir, bands)
 train_dataset = OneraPreloader(opt.data_dir , train_metadata, opt.patch_size, full_load, onera_siamese_loader, opt.augmentation)
-train = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
+train = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=False)
 val_dataset = OneraPreloader(opt.data_dir , val_metadata, opt.patch_size, full_load, onera_siamese_loader)
-val = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=True)
+val = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers, drop_last=False)
 
 fout.write('\n')
 print ('train samples:' + str(len(train_metadata)) + ' val samples:' + str(len(val_metadata)))
@@ -96,7 +97,7 @@ net = w(UNetClassify(layers=opt.layers, init_filters=opt.init_filters, num_chann
 criterion = get_loss(opt.loss_func, opt.weight_factor)
 optimizer = optim.Adam(net.parameters(), lr=opt.lr)
 
-best_iou = -1.0
+best_precision = -1.0
 best_net_dict = None
 best_epoch = -1
 best_loss = 1000.0
@@ -146,17 +147,17 @@ for epoch in tqdm(range(opt.epochs)):
             preds += list(res.flatten())
 
     cur_iou = np.mean(iou)
-    stats = classification_report(gts, preds, labels=[0,1], target_names=['nochange','change'])
-
-    if cur_iou > best_iou or (cur_iou == best_iou and np.mean(losses) < best_loss):
-        best_iou = cur_iou
+    stats = classification_report(gts, preds, labels=[0,1], target_names=['nochange','change'], output_dict='True')
+    
+    if stats['change']['precision'] > best_precision or (stats['change']['precision'] == best_precision and np.mean(losses) < best_loss):
+        best_precision = stats['change']['precision']
         best_epoch = epoch
         best_loss = np.mean(losses)
         torch.save(net.state_dict(), weight_path)
 
     mean_loss = np.mean(losses)
     mean_iou = np.mean(iou)
-    print('val loss', mean_loss, 'epoch iou', mean_iou, 'best loss', best_loss, 'best iou', best_iou)
+    print('val loss', mean_loss, 'epoch iou', mean_iou, 'best loss', best_loss, 'best precision', best_precision)
     print (stats)
 
     fout.write('\n')
@@ -164,9 +165,9 @@ for epoch in tqdm(range(opt.epochs)):
     fout.write('\n')
     fout.write('train loss:' + str(train_loss))
     fout.write('\n')
-    fout.write('val loss:' + str(mean_loss) + ' epoch iou:' + str(mean_iou) + ' best loss:' + str(best_loss) + ' best iou:' + str(best_iou))
+    fout.write('val loss:' + str(mean_loss) + ' epoch iou:' + str(mean_iou) + ' best loss:' + str(best_loss) + ' best precision:' + str(best_precision))
     fout.write('\n')
-    fout.write(stats)
+    fout.write(str(stats))
     fout.write('\n')
 
 fout.close()
