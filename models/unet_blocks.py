@@ -110,10 +110,9 @@ class UNet(nn.Module):
         return x1
 
 class UNetClassify(UNet):
-    def __init__(self, *args, **kwargs):
-        init_val = kwargs.pop('init_val', 0.5)
+    def __init__(self, out_dim, *args, **kwargs):
         super(UNetClassify, self).__init__(*args, **kwargs)
-        self.output_layer = nn.Conv2d(self.init_filters, 1, (3, 3), padding=1)
+        self.output_layer = nn.Conv2d(self.init_filters, out_dim, (3, 3), padding=1)
 
     def forward(self, x1, x2):
         x = super().forward(x1, x2)
@@ -218,9 +217,9 @@ class UNetS2LatePooling(nn.Module):
         return x1_1
 
 class UNetClassifyS2(UNetS2LatePooling):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, out_dim, *args, **kwargs):
         super(UNetClassifyS2, self).__init__(*args, **kwargs)
-        self.output_layer = nn.Conv2d(self.init_filters, 1, (3, 3), padding=1)
+        self.output_layer = nn.Conv2d(self.init_filters, out_dim, (3, 3), padding=1)
 
     def forward(self, x1_1, x1_2, x1_3, x2_1, x2_2, x2_3):
         x = super().forward(x1_1, x1_2, x1_3, x2_1, x2_2, x2_3)

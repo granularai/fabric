@@ -62,6 +62,10 @@ def w(v):
 #5. args handling
 ###############################
 
+out_dim = 1
+if opt.loss_func == 'ce':
+    out_dim = 2
+    
 file_string = 'unet_siamese_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + '_aug_' + str(opt.augmentation) + '_layers_' + str(opt.layers) +\
                 '_batchSize_' + str(opt.batch_size) + '_initFilters_' + str(opt.init_filters) + '_bands_' + str(opt.bands) + '_lossFunc_' + str(opt.loss_func) + '_gamma_' + \
     str(opt.weight_factor) + '_fusionMethod_' + str(opt.fusion_method) + '_lr_' + str(opt.lr) + '_valCities_' + str(opt.val_cities)
@@ -92,9 +96,9 @@ print ('train samples:' + str(len(train_metadata)) + ' val samples:' + str(len(v
 fout.write('train samples:' + str(len(train_metadata)) + ' val samples:' + str(len(val_metadata)))
 fout.write('\n')
 
-net = w(UNetClassify(layers=opt.layers, init_filters=opt.init_filters, num_channels=opt.bands, fusion_method=opt.fusion_method))
+net = w(UNetClassify(layers=opt.layers, init_filters=opt.init_filters, num_channels=opt.bands, fusion_method=opt.fusion_method, out_dim=out_dim))
 
-criterion = get_loss(opt.loss_func, opt.weight_factor)
+criterion = get_loss(opt.loss_func, opt.weight_factor, opt.gpu_id)
 optimizer = optim.Adam(net.parameters(), lr=opt.lr)
 
 best_precision = -1.0
@@ -108,11 +112,16 @@ for epoch in tqdm(range(opt.epochs)):
     for batch_img1, batch_img2, labels in train:
         batch_img1 = w(autograd.Variable(batch_img1))
         batch_img2 = w(autograd.Variable(batch_img2))
-        labels = w(autograd.Variable(labels))
+        
+        if opt.loss_func == 'ce':
+            labels = w(autograd.Variable(labels).long())
+        else:
+            labels = w(autograd.Variable(labels).float())
+            labels = labels.view(-1, 1, opt.patch_size, opt.patch_size)
 
         optimizer.zero_grad()
         output = net(batch_img1, batch_img2)
-        loss = criterion(output, labels.view(-1, 1, opt.patch_size, opt.patch_size).float())
+        loss = criterion(output, labels)
         loss.backward()
         train_losses.append(loss.item())
 
@@ -129,18 +138,27 @@ for epoch in tqdm(range(opt.epochs)):
     gts = []
     preds = []
 
-    for batch_img1, batch_img2, labels_true in val:
-        labels = w(autograd.Variable(labels_true))
+    for batch_img1, batch_img2, labels in val:
         batch_img1 = w(autograd.Variable(batch_img1))
         batch_img2 = w(autograd.Variable(batch_img2))
+        
+        if opt.loss_func == 'ce':
+            labels = w(autograd.Variable(labels).long())
+        else:
+            labels = w(autograd.Variable(labels).float())
+            labels = labels.view(-1, 1, opt.patch_size, opt.patch_size)
 
         output = net(batch_img1, batch_img2)
-        loss = criterion(output, labels.view(-1, 1, opt.patch_size, opt.patch_size).float())
+        loss = criterion(output, labels)
 
         losses += [loss.item()] * opt.batch_size
-        result = (F.sigmoid(output).data.cpu().numpy() > 0.5)
-
-        for label, res in zip(labels_true, result):
+        
+        if opt.loss_func == 'ce':
+            result = np.argmax(output.data.cpu().numpy(), axis=1)
+        else:
+            result = (F.sigmoid(output).data.cpu().numpy() > 0.5)
+    
+        for label, res in zip(labels, result):
             label = label.cpu().numpy()[:, :] > 0.5
             iou.append(get_iou(label, res))
             gts += list(label.flatten())
