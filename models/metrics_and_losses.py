@@ -47,7 +47,7 @@ def get_loss(loss, weight_factor, gpu_id):
         return FocalLoss(weight_factor)
     elif loss == 'ce':
         print('weighted cross entropy')
-        return nn.CrossEntropyLoss(torch.from_numpy(np.asarray([1/(1-weight_factor), 1/weight_factor])).cuda(gpu_id).float())
+        return nn.CrossEntropyLoss(torch.from_numpy(np.asarray([weight_factor, 1-weight_factor])).cuda(gpu_id).float())
     else:
         print('bce')
         return nn.BCEWithLogitsLoss()
