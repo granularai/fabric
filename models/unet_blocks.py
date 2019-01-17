@@ -3,7 +3,7 @@ import torch.utils.data
 import torch.nn as nn
 import torch.nn.functional as F
 
-DROPOUT = 0.0
+DROPOUT = 0.5
 
 class UNetBlock(nn.Module):
     def __init__(self, filters_in, filters_out):
@@ -44,7 +44,7 @@ class UNetUpBlock(UNetBlock):
         self.upnorm = nn.BatchNorm2d(filters_in // 2)
 
     def forward(self, x, x_combd):
-        x = F.upsample(x, size=x_combd.size()[-2:], mode='bilinear')
+        x = F.upsample(x, size=x_combd.size()[-2:], mode='bilinear', align_corners=True)
         x = self.upnorm(self.activation(self.upconv(x)))
         x = torch.cat((x, x_combd), 1)
         return super().forward(x)
@@ -110,10 +110,9 @@ class UNet(nn.Module):
         return x1
 
 class UNetClassify(UNet):
-    def __init__(self, *args, **kwargs):
-        init_val = kwargs.pop('init_val', 0.5)
+    def __init__(self, out_dim, *args, **kwargs):
         super(UNetClassify, self).__init__(*args, **kwargs)
-        self.output_layer = nn.Conv2d(self.init_filters, 1, (3, 3), padding=1)
+        self.output_layer = nn.Conv2d(self.init_filters, out_dim, (3, 3), padding=1)
 
     def forward(self, x1, x2):
         x = super().forward(x1, x2)
@@ -218,9 +217,9 @@ class UNetS2LatePooling(nn.Module):
         return x1_1
 
 class UNetClassifyS2(UNetS2LatePooling):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, out_dim, *args, **kwargs):
         super(UNetClassifyS2, self).__init__(*args, **kwargs)
-        self.output_layer = nn.Conv2d(self.init_filters, 1, (3, 3), padding=1)
+        self.output_layer = nn.Conv2d(self.init_filters, out_dim, (3, 3), padding=1)
 
     def forward(self, x1_1, x1_2, x1_3, x2_1, x2_2, x2_3):
         x = super().forward(x1_1, x1_2, x1_3, x2_1, x2_2, x2_3)

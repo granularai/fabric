@@ -38,13 +38,16 @@ class FocalLoss(nn.Module):
 
         return loss.mean()
 
-def get_loss(loss, weight_factor):
+def get_loss(loss, weight_factor, gpu_id):
     if loss == 'dice':
         print('dice')
         return dice_loss
     elif loss == 'focal':
         print('focal')
         return FocalLoss(weight_factor)
+    elif loss == 'ce':
+        print('weighted cross entropy')
+        return nn.CrossEntropyLoss(torch.from_numpy(np.asarray([weight_factor, 1-weight_factor])).cuda(gpu_id).float())
     else:
         print('bce')
         return nn.BCEWithLogitsLoss()
