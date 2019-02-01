@@ -50,8 +50,8 @@ def stack_bands(bands):
     return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)
 
 parser = argparse.ArgumentParser(description='Inference on Yiwu tiles')
-parser.add_argument('--gpu_id', type='int', defult=0, required=False)
-parser.add_argument('--tile_id', requried=True)
+parser.add_argument('--gpu_id', type=int, default=0, required=False)
+parser.add_argument('--tile_id', required=True)
 
 opt = parser.parse_args()
 
@@ -76,13 +76,15 @@ def w(v):
     return v
 
 model = w(UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1))
-weights = torch.load(weight_file, map_location='cuda:' + str(DEVICE))
+weights = torch.load(weight_file, map_location='cuda:' + str(opt.gpu_id))
 model.load_state_dict(weights)
 
-dates = samples[opt.tile_id]
-dates.sort()
+# dates = ['20151126T024032','20151126T024032']#samples[opt.tile_id]
+# dates = ['20151126T024032',' 20170228T023631']
+dates = ['20170228T023631','20151126T024032']
+# dates.sort()
 
-for i in range(len(dates)-1):
+for i in range(len(dates)):
     for j in range(i+1,len(dates)):
         #get band paths for each date
         d1_bands = glob.glob('../../../Yiwu/SAFES/*' + dates[i] + '*' + opt.tile_id + '*/GRANULE/**/IMG_DATA/*_B*.jp2')
