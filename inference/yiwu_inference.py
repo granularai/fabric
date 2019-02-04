@@ -75,20 +75,29 @@ def w(v):
         return v.cuda(opt.gpu_id)
     return v
 
-model = w(UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1))
-weights = torch.load(weight_file, map_location='cuda:' + str(opt.gpu_id))
-model.load_state_dict(weights)
+# model = w(UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1))
+# weights = torch.load(weight_file, map_location='cuda:' + str(opt.gpu_id))
+# model.load_state_dict(weights)
 
-# dates = ['20151126T024032','20151126T024032']#samples[opt.tile_id]
+dates = samples[opt.tile_id]
+# dates = ['20151126T024032','20151126T024032']
 # dates = ['20151126T024032',' 20170228T023631']
-dates = ['20170228T023631','20151126T024032']
-# dates.sort()
+# dates = ['20170228T023631','20151126T024032']
+dates.sort()
 
-for i in range(len(dates)):
-    for j in range(i+1,len(dates)):
+a = glob.glob('../../../Yiwu/SAFES/*20151126T024032*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+b = glob.glob('../../../Yiwu/SAFES/*20170228T023631*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+c = glob.glob('../../../Yiwu/SAFES/*20171225T024121*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+
+
         #get band paths for each date
-        d1_bands = glob.glob('../../../Yiwu/SAFES/*' + dates[i] + '*' + opt.tile_id + '*/GRANULE/**/IMG_DATA/*_B*.jp2')
-        d2_bands = glob.glob('../../../Yiwu/SAFES/*' + dates[j] + '*' + opt.tile_id + '*/GRANULE/**/IMG_DATA/*_B*.jp2')
+        d1_bands = a
+        d2_bands = b
+        
+        print (d1_bands[0], "%%%%%%%%%%%%%%%%", d2_bands[0])
+        print ('##########################')
+        print ('##########################')
+        print ('##########################')
 
         d1_bands.sort()
         d2_bands.sort()
