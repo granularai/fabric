@@ -19,7 +19,10 @@ from metrics_and_losses import *
 
 
 def read_band(band):
-    return rasterio.open(band).read()[0]
+    r = rasterio.open(band)
+    data = r.read()[0]
+    r.close()
+    return data 
 
 def read_bands(band_paths):
     pool = Pool(39)
@@ -50,7 +53,7 @@ def stack_bands(bands):
     return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:26]).astype(np.float32), np.stack(bands[26:]).astype(np.float32)
 
 
-def inference(d1, d2, profile, date1, date2):
+def inference(d1, d2, profile, date1, date2, model):
     out = np.zeros((d1.shape[1], d1.shape[2]))
 
     batches1 = []
@@ -98,9 +101,10 @@ def inference(d1, d2, profile, date1, date2):
 
     profile['dtype'] = 'uint8'
     profile['driver'] = 'GTiff'
-    fout = rasterio.open(results_dir + opt.tile_id + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
+    fout = rasterio.open(results_dir + 'T51RTM' + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
     fout.write(np.asarray([out]).astype(np.uint8))
     fout.close()
+    print (results_dir + 'T51RTM' + '_' + date1 + '_' + date2 + '.tif')
 
 
 parser = argparse.ArgumentParser(description='Inference on Yiwu tiles')
@@ -109,14 +113,14 @@ parser.add_argument('--gpu_id', type=int, default=0, required=False)
 
 opt = parser.parse_args()
 
-dates = """T50RQS 20151126T024032 20170228T023631 20171225T024121 20180728T023549
-T51RTM 20151126T024032 20170228T023631 20171225T024121 20181001T023551
-T51RTN 20151126T024032 20170228T023631 20171225T024121 20180728T023549
-T50RQT 20151126T024032 20170228T023631 20171225T024121 20181001T023551"""
-samples = {}
-for line in dates.split('\n'):
-    row = line.split()
-    samples[row[0]] = row[1:]
+# dates = """T50RQS 20151126T024032 20170228T023631 20171225T024121 20180728T023549
+# T51RTM 20151126T024032 20170228T023631 20171225T024121 20181001T023551
+# T51RTN 20151126T024032 20170228T023631 20171225T024121 20180728T023549
+# T50RQT 20151126T024032 20170228T023631 20171225T024121 20181001T023551"""
+# samples = {}
+# for line in dates.split('\n'):
+#     row = line.split()
+#     samples[row[0]] = row[1:]
 
 
 input_size = 64
@@ -129,15 +133,15 @@ def w(v):
         return v.cuda(opt.gpu_id)
     return v
 
-# model = w(UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1))
-# weights = torch.load(weight_file, map_location='cuda:' + str(opt.gpu_id))
-# model.load_state_dict(weights)
+model = w(UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1))
+weights = torch.load(weight_file, map_location='cuda:' + str(opt.gpu_id))
+model.load_state_dict(weights)
 
-dates = samples[opt.tile_id]
+# dates = samples[opt.tile_id]
 # dates = ['20151126T024032','20151126T024032']
 # dates = ['20151126T024032',' 20170228T023631']
 # dates = ['20170228T023631','20151126T024032']
-dates.sort()
+# dates.sort()
 
 date1 = '20151126T024032'
 date2 = '20170228T023631'
@@ -156,25 +160,25 @@ d3_bands.sort()
 
 #load bands for two dates and do preprocessing
 d1d2d3 = read_bands(d1_bands + d2_bands + d3_bands)
-d1d2d3[13:26] = match_bands(d1d2[:13], d1d2[13:26])
-d1d2d3[26:] = match_bands(d1d2[:13], d1d2[26:])
+d1d2d3[13:26] = match_bands(d1d2d3[:13], d1d2d3[13:26])
+d1d2d3[26:] = match_bands(d1d2d3[:13], d1d2d3[26:])
 d1, d2, d3 = stack_bands(d1d2d3)
 
-if opt.gou_id == 0
-    d1_d1 = inference(d1, d1, profile, date1, date1)
-if opt.gou_id == 1
-    d2_d2 = inference(d2, d2, profile, date2, date2)
-if opt.gou_id == 2
-    d3_d3 = inference(d3, d3, profile, date3, date3)
-if opt.gou_id == 3
-    d1_d2 = inference(d1, d2, profile, date1, date2)
-if opt.gou_id == 0
-    d2_d1 = inference(d2, d1, profile, date2, date1)
-if opt.gou_id == 1
-    d2_d3 = inference(d2, d3, profile, date2, date3)
-if opt.gou_id == 2
-    d3_d2 = inference(d3, d2, profile, date3, date2)
-if opt.gou_id == 3
-    d1_d3 = inference(d1, d3, profile, date1, date3)
-if opt.gou_id == 0
-    d3_d1 = inference(d3, d1, profile, date3, date1)
+if opt.gpu_id == 0:
+    d1_d1 = inference(d1, d1, profile, date1, date1, model)
+if opt.gpu_id == 1:
+    d2_d2 = inference(d2, d2, profile, date2, date2, model)
+if opt.gpu_id == 2:
+    d3_d3 = inference(d3, d3, profile, date3, date3, model)
+if opt.gpu_id == 3:
+    d1_d2 = inference(d1, d2, profile, date1, date2, model)
+if opt.gpu_id == 0:
+    d2_d1 = inference(d2, d1, profile, date2, date1, model)
+if opt.gpu_id == 1:
+    d2_d3 = inference(d2, d3, profile, date2, date3, model)
+if opt.gpu_id == 2:
+    d3_d2 = inference(d3, d2, profile, date3, date2, model)
+if opt.gpu_id == 3:
+    d1_d3 = inference(d1, d3, profile, date1, date3, model)
+if opt.gpu_id == 0:
+    d3_d1 = inference(d3, d1, profile, date3, date1, model)
