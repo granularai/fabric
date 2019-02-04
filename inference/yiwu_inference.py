@@ -22,7 +22,7 @@ def read_band(band):
     return rasterio.open(band).read()[0]
 
 def read_bands(band_paths):
-    pool = Pool(26)
+    pool = Pool(39)
     bands = pool.map(read_band, band_paths)
     pool.close()
     return bands
@@ -40,18 +40,72 @@ def _resize(band):
     return cv2.resize(band, (10980, 10980))
 
 def stack_bands(bands):
-    pool = Pool(26)
+    pool = Pool(39)
     bands = pool.map(_resize, bands)
     pool.close()
-    pool = Pool(26)
+    pool = Pool(39)
     bands = pool.map(stretch_8bit, bands)
     pool.close()
 
-    return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)
+    return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:26]).astype(np.float32), np.stack(bands[26:]).astype(np.float32)
+
+
+def inference(d1, d2, profile, date1, date2):
+    out = np.zeros((d1.shape[1], d1.shape[2]))
+
+    batches1 = []
+    batches2 = []
+    ijs = []
+    for i in range(0,d1.shape[1],64):
+        for j in range(0,d1.shape[2],64):
+            if i+input_size <= d1.shape[1] and j+input_size <= d1.shape[2]:
+                batches1.append(d1[:,i:i+input_size,j:j+input_size])
+                batches2.append(d2[:,i:i+input_size,j:j+input_size])
+                ijs.append([i,j])
+            elif i+input_size>d1.shape[1] and j+input_size<=d1.shape[2]:
+                batches1.append(d1[:,d1.shape[1]-input_size:d1.shape[1],j:j+input_size])
+                batches2.append(d2[:,d2.shape[1]-input_size:d2.shape[1],j:j+input_size])
+                ijs.append([d1.shape[1]-input_size,j])
+            elif i+input_size<=d1.shape[1] and j+input_size>d1.shape[2]:
+                batches1.append(d1[:,i:i+input_size,d1.shape[2]-input_size:d1.shape[2]])
+                batches2.append(d2[:,i:i+input_size,d2.shape[2]-input_size:d2.shape[2]])
+                ijs.append([i,d1.shape[2]-input_size])
+            else:
+                batches1.append(d1[:,d1.shape[1]-input_size:d1.shape[1],
+                                     d1.shape[2]-input_size:d1.shape[2]])
+                batches2.append(d2[:,d2.shape[1]-input_size:d2.shape[1],
+                                     d2.shape[2]-input_size:d2.shape[2]])
+                ijs.append([d1.shape[1]-input_size,d1.shape[2]-input_size])
+
+            if len(batches1) == 110:
+                inp1 = w(torch.from_numpy(np.asarray(batches1) / 255.))
+                inp2 = w(torch.from_numpy(np.asarray(batches2) / 255.))
+                logits = model(inp1, inp2)
+                pred = F.sigmoid(logits) > 0.5
+                pred = pred.data.cpu().numpy()
+
+                batches1 = []
+                batches2 = []
+
+                del inp1
+                del inp2
+
+                for c in range(len(ijs)):
+                    out[ijs[c][0]:ijs[c][0]+input_size,ijs[c][1]:ijs[c][1]+input_size] = pred[c]
+
+                ijs = []
+
+
+    profile['dtype'] = 'uint8'
+    profile['driver'] = 'GTiff'
+    fout = rasterio.open(results_dir + opt.tile_id + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
+    fout.write(np.asarray([out]).astype(np.uint8))
+    fout.close()
+
 
 parser = argparse.ArgumentParser(description='Inference on Yiwu tiles')
 parser.add_argument('--gpu_id', type=int, default=0, required=False)
-parser.add_argument('--tile_id', required=True)
+# parser.add_argument('--tile_id', required=True)
 
 opt = parser.parse_args()
 
@@ -85,75 +139,42 @@ dates = samples[opt.tile_id]
 # dates = ['20170228T023631','20151126T024032']
 dates.sort()
 
-a = glob.glob('../../../Yiwu/SAFES/*20151126T024032*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
-b = glob.glob('../../../Yiwu/SAFES/*20170228T023631*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
-c = glob.glob('../../../Yiwu/SAFES/*20171225T024121*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+date1 = '20151126T024032'
+date2 = '20170228T023631'
+date3 = '20171225T024121'
+
+d1_bands = glob.glob('../../../Yiwu/SAFES/*' + date1 + '*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+d2_bands = glob.glob('../../../Yiwu/SAFES/*' + date2 + '*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+d3_bands = glob.glob('../../../Yiwu/SAFES/*' + date3 + '*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
+
+profile = rasterio.open(d1_bands[0]).profile
 
 
-        #get band paths for each date
-        d1_bands = a
-        d2_bands = b
-        
-        print (d1_bands[0], "%%%%%%%%%%%%%%%%", d2_bands[0])
-        print ('##########################')
-        print ('##########################')
-        print ('##########################')
+d1_bands.sort()
+d2_bands.sort()
+d3_bands.sort()
 
-        d1_bands.sort()
-        d2_bands.sort()
+#load bands for two dates and do preprocessing
+d1d2d3 = read_bands(d1_bands + d2_bands + d3_bands)
+d1d2d3[13:26] = match_bands(d1d2[:13], d1d2[13:26])
+d1d2d3[26:] = match_bands(d1d2[:13], d1d2[26:])
+d1, d2, d3 = stack_bands(d1d2d3)
 
-        #load bands for two dates and do preprocessing
-        d1d2 = read_bands(d1_bands + d2_bands)
-        d1d2[13:] = match_bands(d1d2[:13], d1d2[13:])
-        d1, d2 = stack_bands(d1d2)
-
-        out = np.zeros((d1.shape[1], d1.shape[2]))
-
-        batches1 = []
-        batches2 = []
-        ijs = []
-        for i in range(0,d1.shape[1],64):
-            for j in range(0,d1.shape[2],64):
-                if i+input_size <= d1.shape[1] and j+input_size <= d1.shape[2]:
-                    batches1.append(d1[:,i:i+input_size,j:j+input_size])
-                    batches2.append(d2[:,i:i+input_size,j:j+input_size])
-                    ijs.append([i,j])
-                elif i+input_size>d1.shape[1] and j+input_size<=d1.shape[2]:
-                    batches1.append(d1[:,d1.shape[1]-input_size:d1.shape[1],j:j+input_size])
-                    batches2.append(d2[:,d2.shape[1]-input_size:d2.shape[1],j:j+input_size])
-                    ijs.append([d1.shape[1]-input_size,j])
-                elif i+input_size<=d1.shape[1] and j+input_size>d1.shape[2]:
-                    batches1.append(d1[:,i:i+input_size,d1.shape[2]-input_size:d1.shape[2]])
-                    batches2.append(d2[:,i:i+input_size,d2.shape[2]-input_size:d2.shape[2]])
-                    ijs.append([i,d1.shape[2]-input_size])
-                else:
-                    batches1.append(d1[:,d1.shape[1]-input_size:d1.shape[1],
-                                         d1.shape[2]-input_size:d1.shape[2]])
-                    batches2.append(d2[:,d2.shape[1]-input_size:d2.shape[1],
-                                         d2.shape[2]-input_size:d2.shape[2]])
-                    ijs.append([d1.shape[1]-input_size,d1.shape[2]-input_size])
-
-                if len(batches1) == 110:
-                    inp1 = w(torch.from_numpy(np.asarray(batches1) / 255.))
-                    inp2 = w(torch.from_numpy(np.asarray(batches2) / 255.))
-                    logits = model(inp1, inp2)
-                    pred = F.sigmoid(logits) > 0.5
-                    pred = pred.data.cpu().numpy()
-
-                    batches1 = []
-                    batches2 = []
-
-                    del inp1
-                    del inp2
-
-                    for c in range(len(ijs)):
-                        out[ijs[c][0]:ijs[c][0]+input_size,ijs[c][1]:ijs[c][1]+input_size] = pred[c]
-
-                    ijs = []
-
-        profile = rasterio.open(d1_bands[1]).profile
-        profile['dtype'] = 'uint8'
-        profile['driver'] = 'GTiff'
-        fout = rasterio.open(results_dir + opt.tile_id + '_' + dates[i] + '_' + dates[j] + '.tif', 'w', **profile)
-        fout.write(np.asarray([out]).astype(np.uint8))
-        fout.close()
+if opt.gou_id == 0
+    d1_d1 = inference(d1, d1, profile, date1, date1)
+if opt.gou_id == 1
+    d2_d2 = inference(d2, d2, profile, date2, date2)
+if opt.gou_id == 2
+    d3_d3 = inference(d3, d3, profile, date3, date3)
+if opt.gou_id == 3
+    d1_d2 = inference(d1, d2, profile, date1, date2)
+if opt.gou_id == 0
+    d2_d1 = inference(d2, d1, profile, date2, date1)
+if opt.gou_id == 1
+    d2_d3 = inference(d2, d3, profile, date2, date3)
+if opt.gou_id == 2
+    d3_d2 = inference(d3, d2, profile, date3, date2)
+if opt.gou_id == 3
+    d1_d3 = inference(d1, d3, profile, date1, date3)
+if opt.gou_id == 0
+    d3_d1 = inference(d3, d1, profile, date3, date1)
