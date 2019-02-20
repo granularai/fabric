@@ -1,4 +1,4 @@
-import os, math, cv2, sys, glob, random, argparse
+import os, math, cv2, sys, glob, random, argparse, csv
 from multiprocessing import Pool
 from itertools import product
 import numpy as np
@@ -25,7 +25,7 @@ def read_band(band):
     return data 
 
 def read_bands(band_paths):
-    pool = Pool(39)
+    pool = Pool(26)
     bands = pool.map(read_band, band_paths)
     pool.close()
     return bands
@@ -43,17 +43,17 @@ def _resize(band):
     return cv2.resize(band, (10980, 10980))
 
 def stack_bands(bands):
-    pool = Pool(39)
+    pool = Pool(26)
     bands = pool.map(_resize, bands)
     pool.close()
-    pool = Pool(39)
+    pool = Pool(26)
     bands = pool.map(stretch_8bit, bands)
     pool.close()
 
-    return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:26]).astype(np.float32), np.stack(bands[26:]).astype(np.float32)
+    return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)
 
 
-def inference(d1, d2, profile, date1, date2, model):
+def inference(tid, d1, d2, profile, date1, date2, model):
     out = np.zeros((d1.shape[1], d1.shape[2]))
 
     batches1 = []
@@ -101,10 +101,10 @@ def inference(d1, d2, profile, date1, date2, model):
 
     profile['dtype'] = 'uint8'
     profile['driver'] = 'GTiff'
-    fout = rasterio.open(results_dir + 'T51RTM' + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
-    fout.write(np.asarray([out]).astype(np.uint8))
+    fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
+    fout.write(np.asarray([out]).astype(np.uint8) * 255)
     fout.close()
-    print (results_dir + 'T51RTM' + '_' + date1 + '_' + date2 + '.tif')
+    print (results_dir + tid + '_' + date1 + '_' + date2 + '.tif')
 
 
 parser = argparse.ArgumentParser(description='Inference on Yiwu tiles')
@@ -125,8 +125,25 @@ opt = parser.parse_args()
 
 input_size = 64
 weight_file = '../../weights/onera/unet_siamese_prod_relu_inp64_13band_2dates_focal_hm_cnc_all_14_cities.pt'
-results_dir = '../../../Yiwu/cd_out/'
 
+data_dir = '/media/Drive1/CDTiles/'
+results_dir = data_dir + 'cd_out/'
+
+fin = open(data_dir + '100_cities_distinct_pairs.csv', 'r')
+r = csv.reader(fin)
+pairs = []
+for row in r:
+    pairs.append(row)
+    
+if opt.gpu_id == 0:
+    pairs_gpu = pairs[:30]
+if opt.gpu_id == 1:
+    pairs_gpu = pairs[30:60]
+if opt.gpu_id == 2:
+    pairs_gpu = pairs[60:90]
+if opt.gpu_id == 3:
+    pairs_gpu = pairs[90:120]
+    
 USE_CUDA = torch.cuda.is_available()
 def w(v):
     if USE_CUDA:
@@ -136,6 +153,7 @@ def w(v):
 model = w(UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1))
 weights = torch.load(weight_file, map_location='cuda:' + str(opt.gpu_id))
 model.load_state_dict(weights)
+model = model.eval()
 
 # dates = samples[opt.tile_id]
 # dates = ['20151126T024032','20151126T024032']
@@ -143,42 +161,24 @@ model.load_state_dict(weights)
 # dates = ['20170228T023631','20151126T024032']
 # dates.sort()
 
-date1 = '20151126T024032'
-date2 = '20170228T023631'
-date3 = '20171225T024121'
+for pair in pairs_gpu:
+    
+    date1 = pair[0]
+    date2 = pair[2]
+    
+    d1_bands = glob.glob(data_dir + 'SAFES/' + pair[1] + '/GRANULE/**/IMG_DATA/*_B*.jp2')
+    d2_bands = glob.glob(data_dir + 'SAFES/' + pair[3] + '/GRANULE/**/IMG_DATA/*_B*.jp2')
 
-d1_bands = glob.glob('../../../Yiwu/SAFES/*' + date1 + '*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
-d2_bands = glob.glob('../../../Yiwu/SAFES/*' + date2 + '*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
-d3_bands = glob.glob('../../../Yiwu/SAFES/*' + date3 + '*T51RTM*/GRANULE/**/IMG_DATA/*_B*.jp2')
-
-profile = rasterio.open(d1_bands[0]).profile
+#     print (d1_bands, d2_bands)
+    profile = rasterio.open(d1_bands[2]).profile
 
 
-d1_bands.sort()
-d2_bands.sort()
-d3_bands.sort()
+    d1_bands.sort()
+    d2_bands.sort()
 
-#load bands for two dates and do preprocessing
-d1d2d3 = read_bands(d1_bands + d2_bands + d3_bands)
-d1d2d3[13:26] = match_bands(d1d2d3[:13], d1d2d3[13:26])
-d1d2d3[26:] = match_bands(d1d2d3[:13], d1d2d3[26:])
-d1, d2, d3 = stack_bands(d1d2d3)
+    #load bands for two dates and do preprocessing
+    d1d2 = read_bands(d1_bands + d2_bands)
+    d1d2[13:] = match_bands(d1d2[:13], d1d2[13:])
+    d1, d2 = stack_bands(d1d2)
 
-if opt.gpu_id == 0:
-    d1_d1 = inference(d1, d1, profile, date1, date1, model)
-if opt.gpu_id == 1:
-    d2_d2 = inference(d2, d2, profile, date2, date2, model)
-if opt.gpu_id == 2:
-    d3_d3 = inference(d3, d3, profile, date3, date3, model)
-if opt.gpu_id == 3:
-    d1_d2 = inference(d1, d2, profile, date1, date2, model)
-if opt.gpu_id == 0:
-    d2_d1 = inference(d2, d1, profile, date2, date1, model)
-if opt.gpu_id == 1:
-    d2_d3 = inference(d2, d3, profile, date2, date3, model)
-if opt.gpu_id == 2:
-    d3_d2 = inference(d3, d2, profile, date3, date2, model)
-if opt.gpu_id == 3:
-    d1_d3 = inference(d1, d3, profile, date1, date3, model)
-if opt.gpu_id == 0:
-    d3_d1 = inference(d3, d1, profile, date3, date1, model)
+    d1_d2 = inference(pair[-1], d1, d2, profile, date1, date2, model)
