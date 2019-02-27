@@ -13,11 +13,10 @@ import torch.autograd as autograd
 from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 
-sys.path.append('../utils')
-sys.path.append('../models')
-from dataloaders import *
-from unet_blocks import *
-from metrics_and_losses import *
+sys.path.append('.')
+from utils.dataloaders import *
+from models.unet_blocks import *
+from models.metrics_and_losses import *
 
 #python3 unet_siamese_prod.py --data_dir='../../datasets/onera/' --weight_dir='../../weights/onera/' --log_dir='../../logs/onera/' --gpu_id=7 --patch_size=122 --batch_size=32 --num_workers=8 --layers=5 --loss_func='dice' --lr=0.01 --stride=61
 parser = argparse.ArgumentParser(description='Siamese Change Detection network training')

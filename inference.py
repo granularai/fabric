@@ -9,49 +9,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-sys.path.append('../utils')
-sys.path.append('../models')
-from dataloaders import *
-from unet_blocks import *
-from metrics_and_losses import *
-
-
-
-
-def read_band(band):
-    r = rasterio.open(band)
-    data = r.read()[0]
-    r.close()
-    return data 
-
-def read_bands(band_paths):
-    pool = Pool(26)
-    bands = pool.map(read_band, band_paths)
-    pool.close()
-    return bands
-
-def _match_band(two_date):
-    return match_band(two_date[1], two_date[0])
-
-def match_bands(date1, date2):
-    pool = Pool(13)
-    date2 = pool.map(_match_band, [[date1[i], date2[i]] for i in range(len(date1))])
-    pool.close()
-    return date2
-
-def _resize(band):
-    return cv2.resize(band, (10980, 10980))
-
-def stack_bands(bands):
-    pool = Pool(26)
-    bands = pool.map(_resize, bands)
-    pool.close()
-    pool = Pool(26)
-    bands = pool.map(stretch_8bit, bands)
-    pool.close()
-
-    return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)
-
+sys.path.append('.')
+from utils.dataloaders import *
+from models.unet_blocks import *
+from models.metrics_and_losses import *
 
 def inference(tid, d1, d2, profile, date1, date2, model):
     out = np.zeros((d1.shape[1], d1.shape[2]))
@@ -124,7 +85,7 @@ opt = parser.parse_args()
 
 
 input_size = 64
-weight_file = '../../weights/onera/unet_siamese_prod_relu_inp64_13band_2dates_focal_hm_cnc_all_14_cities.pt'
+weight_file = '../weights/onera/unet_siamese_prod_relu_inp64_13band_2dates_focal_hm_cnc_all_14_cities.pt'
 
 data_dir = '/media/Drive1/CDTiles/'
 results_dir = data_dir + 'cd_out/'
