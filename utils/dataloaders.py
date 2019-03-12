@@ -103,24 +103,7 @@ def get_bands(patches, hs, ws, lc, lr, h, w):
     
     return img
 
-
-
 def match_band(source, template):
-    """
-    Adjust the pixel values of a grayscale image such that its histogram
-    matches that of a target image
-    Arguments:
-    -----------
-        source: np.ndarray
-            Image to transform; the histogram is computed over the flattened
-            array
-        template: np.ndarray
-            Template image; can have different dimensions to source
-    Returns:
-    -----------
-        matched: np.ndarray
-            The transformed output image
-    """
     oldshape = source.shape
     source = source.ravel()
     template = template.ravel()
@@ -149,28 +132,12 @@ def match_band(source, template):
     t_quantiles = np.cumsum(t_counts).astype(np.float32)
     t_quantiles /= t_quantiles[-1]
 
-    # interpolate linearly to find the pixel values in the template image
-    # that correspond most closely to the quantiles in the source image
     interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
 
     return interp_t_values[bin_idx].reshape(oldshape)
 
 
 def stretch_8bit(band, lower_percent=2, higher_percent=98):
-    """stretch_8bit takes a 3 band image (as an array) and returns an 8bit array with clipped values (5-95%) stretched to 0-255
-    Parameters
-    ----------
-    bands : numpy.array
-        Numpy array of shape  (*,*,3)
-    lower_percent : type
-        Lower threshold below which array values will be discarded (the default is 5).
-    higher_percent : type
-        Upper threshold above which array values will be discarded (the default is 95).
-    Returns
-    -------
-    numpy.array
-        Numpy array containing np.uint8 values of shape bands.shape
-    """
     a = 0
     b = 255
     real_values = band.flatten()
@@ -208,42 +175,6 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
 
     return train_metadata, val_metadata
 
-def city_loader(city_path_meta):
-    city_path = city_path_meta[0]
-    h = city_path_meta[1]
-    w = city_path_meta[2]
-    
-    base_path1 = glob.glob(city_path + '/imgs_1/*.tif')[0][:-7]
-    base_path2 = glob.glob(city_path + '/imgs_2/*.tif')[0][:-7]
-    
-
-    bands1_stack = []
-    bands2_stack = []
-    for band_id in band_ids:
-        band1_r = rasterio.open(base_path1 + band_id + '.tif')
-        band2_r = rasterio.open(base_path2 + band_id + '.tif')
-
-        band1_d = band1_r.read()[0]
-        band2_d = band2_r.read()[0]
-
-        band1_d[band1_d > band_maxs[band_id]] = band_maxs[band_id]
-        band2_d[band2_d > band_maxs[band_id]] = band_maxs[band_id]
-                
-        band2_d = match_band(band2_d, band1_d)
-
-        band1_d = stretch_8bit(band1_d, band_maxs[band_id]).astype(np.float32) / 255.
-        band1_d = cv2.resize(band1_d, (h, w))
-        bands1_stack.append(band1_d)
-
-        band2_d = stretch_8bit(band2_d, band_maxs[band_id]).astype(np.float32) / 255.
-        band2_d = cv2.resize(band2_d, (h, w))
-        bands2_stack.append(band2_d)
-
-    two_dates = np.asarray([bands1_stack, bands2_stack])
-    two_dates = np.transpose(two_dates, (1,0,2,3))
-    
-    return two_dates
-
 def label_loader(label_path):
     label = cv2.imread(label_path + '/cm/' + 'cm.png', 0) / 255
     return label
@@ -277,86 +208,6 @@ def full_onera_loader(path):
 
     return dataset
 
-def full_onera_multidate_loader(path, bands):
-    fin = open(path + 'multidate_metadata.json','r')
-    metadata = json.load(fin)
-    fin.close()
-
-    cities = os.listdir(path + 'train_labels/')
-
-    dataset = {}
-    for city in cities:
-        if city in metadata:
-            dates_stack = []
-            label = cv2.imread(path + 'train_labels/' + city + '/cm/' + 'cm.png', 0) / 255
-
-            first_date = True
-            for date_no in range(5):
-                bands_stack = []
-                base_path = glob.glob(metadata[city][str(date_no)] + '/*.tif')[0][:-7]
-
-                for band_no in range(len(bands)):
-                    band_r = rasterio.open(base_path + bands[band_no] + '.tif')
-                    band_d = band_r.read()[0]
-
-                    if not first_date:
-                        band_d = match_band(band_d, dates_stack[0][band_no])
-
-                    band_d = stretch_8bit(band_d, 2, 98).astype(np.float32) / 255.
-                    band_d = cv2.resize(band_d, (label.shape[1], label.shape[0]))
-                    bands_stack.append(band_d)
-
-                if not first_date:
-                    first_date = False
-
-                dates_stack.append(bands_stack)
-
-            dates_stack = np.asarray(dates_stack).transpose(1,0,2,3)
-            dataset[city] = {'images':dates_stack , 'labels': label.astype(np.uint8)}
-
-    return dataset
-
-def full_buildings_loader(path):
-    dates = os.listdir(path + 'Images/')
-    dates.sort()
-
-    label_r = rasterio.open(path + 'Ground_truth/Changes/Changes_06_11.tif')
-    label = label_r.read()[0]
-
-    stacked_dates = []
-    for date in dates:
-        r = rasterio.open(path + 'Images/' + date)
-        d = r.read()
-        bands = []
-        if d.shape[0] == 4:
-            for b in d:
-                band = stretch_8bit(b, 0.01, 99)
-                band = cv2.resize(band, (label.shape[1], label.shape[0]))
-                bands.append(band / 255.)
-        if d.shape[0] == 8:
-            for b in [1,2,4,7]:
-                band = stretch_8bit(d[b], 0.01, 99)
-                band = cv2.resize(band, (label.shape[1], label.shape[0]))
-                bands.append(band/ 255.)
-        stacked_dates.append(bands)
-
-    stacked_dates = np.asarray(stacked_dates).astype(np.float32).transpose(1,0,2,3)
-
-    print (stacked_dates.shape, label.shape)
-    return {'images':stacked_dates, 'labels':label.astype(np.uint8)}
-
-
-def onera_loader(dataset, city, x, y, size, aug):
-    out_img = dataset[city]['images'][:, : ,x:x+size, y:y+size]
-    if aug:
-        out_img = np.rot90(out_img, random.randint(0,3), [2,3])
-        if random.random() > 0.5:
-            out_img = np.flip(out_img, axis=2)
-        if random.random() > 0.5:
-            out_img = np.flip(out_img, axis=2)
-
-    return out_img, dataset[city]['labels'][x:x+size, y:y+size]
-
 def onera_siamese_loader(dataset, city, x, y, size, aug):
     out_img = np.copy(dataset[city]['images'][:, : ,x:x+size, y:y+size])
     out_lbl = np.copy(dataset[city]['labels'][x:x+size, y:y+size])
@@ -376,8 +227,6 @@ def onera_siamese_loader(dataset, city, x, y, size, aug):
     out_img = np.transpose(out_img, (1,0,2,3))
     return out_img[0], out_img[1], out_lbl
 
-def buildings_loader(dataset, x, y, size):
-    return dataset['images'][:,:, x:x+size, y:y+size], dataset['labels'][x:x+size, y:y+size]
 
 class OneraPreloader(data.Dataset):
 
@@ -402,42 +251,6 @@ class OneraPreloader(data.Dataset):
         city, x, y = self.imgs[index]
 
         return self.loader(self.full_load, city, x, y, self.input_size, self.aug)
-
-    def __len__(self):
-        return len(self.imgs)
-
-class BuildingsPreloader(data.Dataset):
-
-    def __init__(self, root, csv_file, input_size, full_load, loader=buildings_loader):
-
-        r = csv.reader(open(csv_file, 'r'), delimiter=',')
-
-        images_list = []
-
-        for row in r:
-            images_list.append([int(row[0]), int(row[1])])
-
-        random.shuffle(images_list)
-
-        self.full_load = full_load
-        self.input_size = input_size
-        self.root = root
-        self.imgs = images_list
-        self.loader = loader
-
-    def __getitem__(self, index):
-        """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is class_index of the target class.
-        """
-        x, y = self.imgs[index]
-
-        img, target = self.loader(self.full_load, x, y, self.input_size)
-#         print (img.shape)
-        return img, target
 
     def __len__(self):
         return len(self.imgs)

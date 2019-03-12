@@ -20,7 +20,6 @@ from models.metrics_and_losses import *
 
 from moonshot import alert
 
-#python3 unet_siamese_prod.py --data_dir='../../datasets/onera/' --weight_dir='../../weights/onera/' --log_dir='../../logs/onera/' --gpu_id=7 --patch_size=122 --batch_size=32 --num_workers=8 --layers=5 --loss_func='dice' --lr=0.01 --stride=61
 parser = argparse.ArgumentParser(description='Training change detection network')
 
 parser.add_argument('--patch_size', type=int, default=120, required=False, help='input patch size')
@@ -36,6 +35,7 @@ parser.add_argument('--lr', type=float, default=0.01, required=False, help='Lear
 parser.add_argument('--val_cities', default='0,1', required=False, help='''cities to use for validation,
                             0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, 5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai,
                             9:nantes, 10:paris, 11:pisa, 12:rennes, 14:saclay_e''')
+
 parser.add_argument('--data_dir', default='../datasets/onera/', required=False, help='data directory for training')
 parser.add_argument('--weight_dir', default='../weights/', required=False, help='directory to save weights')
 parser.add_argument('--log_dir', default='../logs/', required=False, help='directory to save training log')
