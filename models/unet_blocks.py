@@ -109,9 +109,9 @@ class UNet(nn.Module):
             x1 = layer(x1, x_combd)
         return x1
 
-class UNetCD(UNet):
+class UNetClassify(UNet):
     def __init__(self, out_dim, *args, **kwargs):
-        super(UNetCD, self).__init__(*args, **kwargs)
+        super(UNetClassify, self).__init__(*args, **kwargs)
         self.output_layer = nn.Conv2d(self.init_filters, out_dim, (3, 3), padding=1)
 
     def forward(self, x1, x2):

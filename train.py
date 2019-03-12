@@ -29,6 +29,7 @@ parser.add_argument('--stride', type=int, default=10, required=False, help='stri
 parser.add_argument('--epochs', type=int, default=10, required=False, help='number of eochs to train')
 parser.add_argument('--layers', type=int, default=5, required=False, help='number of layers in unet')
 parser.add_argument('--batch_size', type=int, default=256, required=False, help='batch size for training')
+parser.add_argument('--loss', type=str, default='bce', required=False, help='bce,focal')
 parser.add_argument('--gamma', type=float, default=2, required=False, help='if focal loss is used pass gamma')
 parser.add_argument('--lr', type=float, default=0.01, required=False, help='Learning rate')
 
@@ -41,11 +42,17 @@ parser.add_argument('--log_dir', default='../logs/', required=False, help='direc
 
 opt = parser.parse_args()
 
+if opt.loss == 'bce':
+    path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
+            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
+            '_lr_' + str(opt.lr) + '_layers_' + str(opt.layers) + '_epochs_' + str(opt.epochs) +\
+            '_valCities_' + opt.val_cities 
 
-path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-        '_batchSize_' + str(opt.batch_size) + '_gamma_' + str(opt.gamma) + \
-        '_lr_' + str(opt.lr) + '_layers_' + str(opt.layers) + '_epochs_' + str(opt.epochs) +\
-        '_valCities_' + opt.val_cities 
+if opt.loss == 'focal':
+    path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
+            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_gamma_' + str(opt.gamma) + \
+            '_lr_' + str(opt.lr) + '_layers_' + str(opt.layers) + '_epochs_' + str(opt.epochs) +\
+            '_valCities_' + opt.val_cities 
 
 weight_path = opt.weight_dir + path + '.pt'
 log_path = opt.log_dir + path + '.log'
@@ -72,8 +79,12 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_siz
 model = UNetCD(layers=opt.layers, init_filters=64, num_channels=13, fusion_method='mul', out_dim=1).cuda()
 model = nn.DataParallel(model, device_ids=[0,1,2,3])
 
-criterion = FocalLoss(opt.gamma)
-optimizer = optim.Adam(model.parameters(), lr=opt.lr)
+if opt.loss == 'bce':
+    criterion = nn.BCEWithLogitsLoss()
+if opt.loss == 'focal':
+    criterion = FocalLoss(opt.gamma)
+
+optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
 best_f1s = -1

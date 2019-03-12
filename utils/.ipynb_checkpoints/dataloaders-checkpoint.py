@@ -5,6 +5,8 @@ import glob
 import rasterio
 import cv2
 
+from sklearn.feature_extraction import image
+
 from multiprocessing import Pool
 
 from PIL import Image
@@ -48,17 +50,60 @@ def match_bands(date1, date2):
     return date2
 
 def _resize(band):
-    return cv2.resize(band, (10980, 10980))
+    band = cv2.resize(band, (10980, 10980))
+    band = stretch_8bit(band)
+    return band 
 
 def stack_bands(bands):
     pool = Pool(26)
     bands = pool.map(_resize, bands)
     pool.close()
-    pool = Pool(26)
-    bands = pool.map(stretch_8bit, bands)
-    pool.close()
 
     return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)
+
+def get_patches(bands):
+    patches = image.extract_patches(bands, (64, 64, 13), 64)
+    hs, ws = patches.shape[0], patches.shape[1]
+    patches = patches.reshape(-1, 64, 64, 13)
+    
+    last_row = bands[bands.shape[0]-64:,:,:]
+    last_column = bands[:,bands.shape[1]-64:,:]
+    corner = np.asarray([bands[bands.shape[0]-64:,bands.shape[1]-64:,:]])
+    
+    last_column = image.extract_patches(last_column, (64,64,13), 64).reshape(-1, 64, 64, 13)
+    last_row = image.extract_patches(last_row, (64,64,13), 64).reshape(-1, 64, 64, 13)
+
+    lc = last_column.shape[0]
+    lr = last_row.shape[0]
+    
+    patches = np.vstack((patches, last_column, last_row, corner))
+    
+    return patches, hs, ws, lc, lr, bands.shape[0], bands.shape[1]
+
+def get_bands(patches, hs, ws, lc, lr, h, w):
+    corner = patches[-1]
+    last_row = patches[-lr-1:-1]
+    last_column = patches[-lc-lr-1:-lr-1]
+    patches = patches[:-lc-lr-1]
+    
+    img = np.zeros((h,w))
+    k = 0
+    for i in range(hs):
+        for j in range(ws):
+            img[i*64:i*64+64,j*64:j*64+64] = patches[k]
+            k += 1
+    
+    for i in range(lc):
+        img[i*64:i*64+64,w-64:] = last_column[i]
+        
+    for i in range(lr):
+        img[h-64:,i*64:i*64+64] = last_row[i]
+    
+    img[h-64:,w-64:] = corner
+    
+    return img
+
+
 
 def match_band(source, template):
     """
@@ -111,10 +156,27 @@ def match_band(source, template):
     return interp_t_values[bin_idx].reshape(oldshape)
 
 
-def stretch_8bit(band, d):
+def stretch_8bit(band, lower_percent=2, higher_percent=98):
+    """stretch_8bit takes a 3 band image (as an array) and returns an 8bit array with clipped values (5-95%) stretched to 0-255
+    Parameters
+    ----------
+    bands : numpy.array
+        Numpy array of shape  (*,*,3)
+    lower_percent : type
+        Lower threshold below which array values will be discarded (the default is 5).
+    higher_percent : type
+        Upper threshold above which array values will be discarded (the default is 95).
+    Returns
+    -------
+    numpy.array
+        Numpy array containing np.uint8 values of shape bands.shape
+    """
     a = 0
     b = 255
-    c = 0
+    real_values = band.flatten()
+    real_values = real_values[real_values > 0]
+    c = np.percentile(real_values, lower_percent)
+    d = np.percentile(real_values, higher_percent)
     t = a + (band - c) * ((b - a) / (d - c))
     t[t<a] = a
     t[t>b] = b
