@@ -212,7 +212,7 @@ def city_loader(city_meta):
     band_path = glob.glob(city + '/imgs_1/*')[0][:-7]
     bands_date1 = []
     for i in range(len(band_ids)):
-        band = rasterio.open(band_path + band_ids[i] + '.tif').read()[0]
+        band = rasterio.open(band_path + band_ids[i] + '.tif').read()[0].astype(np.float32)
         band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
         band = cv2.resize(band, (h,w))
         bands_date1.append(band)
@@ -220,7 +220,7 @@ def city_loader(city_meta):
     band_path = glob.glob(city + '/imgs_2/*')[0][:-7]
     bands_date2 = []
     for i in range(len(band_ids)):
-        band = rasterio.open(band_path + band_ids[i] + '.tif').read()[0]
+        band = rasterio.open(band_path + band_ids[i] + '.tif').read()[0].astype(np.float32)
         band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
         band = cv2.resize(band, (h,w))
         bands_date2.append(band)

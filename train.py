@@ -31,9 +31,12 @@ parser.add_argument('--num_workers', type=int, default=90, required=False, help=
 
 parser.add_argument('--epochs', type=int, default=10, required=False, help='number of eochs to train')
 parser.add_argument('--batch_size', type=int, default=256, required=False, help='batch size for training')
-parser.add_argument('--loss', type=str, default='bce', required=False, help='bce,focal')
-parser.add_argument('--gamma', type=float, default=2, required=False, help='if focal loss is used pass gamma')
 parser.add_argument('--lr', type=float, default=0.01, required=False, help='Learning rate')
+
+parser.add_argument('--loss', type=str, default='bce', required=False, help='bce,focal,dice,jaccard,tversky')
+parser.add_argument('--gamma', type=float, default=2, required=False, help='if focal loss is used pass gamma')
+parser.add_argument('--alpha', type=float, default=0.5, required=False, help='if tversky loss is used pass alpha')
+parser.add_argument('--beta', type=float, default=0.5, required=False, help='if tversky loss is used pass beta')
 
 parser.add_argument('--val_cities', default='0,1', required=False, help='''cities to use for validation,
                             0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, 5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai,
@@ -45,7 +48,7 @@ parser.add_argument('--log_dir', default='../logs/', required=False, help='direc
 
 opt = parser.parse_args()
 
-if opt.loss == 'bce':
+if opt.loss == 'bce' or opt.loss == 'dice' or opt.loss == 'jaccard':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
@@ -57,6 +60,12 @@ if opt.loss == 'focal':
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
             '_valCities_' + opt.val_cities 
 
+if opt.loss == 'tversky':
+    path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
+            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_alpha_' + str(opt.alpha) + '_beta_' + str(opt.beta) + \
+            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
+            '_valCities_' + opt.val_cities 
+    
 weight_path = opt.weight_dir + path + '.pt'
 log_path = opt.log_dir + path + '.log'
 
@@ -79,14 +88,21 @@ test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_s
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 
-model = BiDateNet(13, 1).cuda()
+model = BiDateNet(13, 2).cuda()
 model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
+model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.1_beta_0.9_lr_0.01_epochs_10_valCities_0,1.pt')
 
 if opt.loss == 'bce':
     criterion = nn.BCEWithLogitsLoss()
 if opt.loss == 'focal':
     criterion = FocalLoss(opt.gamma)
-
+if opt.loss == 'dice':
+    criterion = dice_loss
+if opt.loss == 'jaccard':
+    criterion = jaccard_loss
+if opt.loss == 'tversky':
+    criterion = TverskyLoss(alpha=opt.alpha, beta=opt.beta)
+    
 optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
@@ -105,8 +121,7 @@ for epoch in range(opt.epochs):
         batch_img1 = autograd.Variable(batch_img1).cuda()
         batch_img2 = autograd.Variable(batch_img2).cuda()
         
-        labels = autograd.Variable(labels).float().cuda()
-        labels = labels.view(-1, 1, opt.patch_size, opt.patch_size)
+        labels = autograd.Variable(labels).long().cuda()
 
         optimizer.zero_grad()
         preds = model(batch_img1, batch_img2)
@@ -114,10 +129,11 @@ for epoch in range(opt.epochs):
         loss.backward()
         optimizer.step()
         
-        preds = torch.sigmoid(preds) > 0.5
-        corrects = 100 * (preds == labels.byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
+        _, preds = torch.max(preds, 1)
         
-        train_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary')
+        corrects = 100 * (preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
+        
+        train_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
         
         train_losses.append(loss.item())
         train_corrects.append(corrects.item())
@@ -149,16 +165,17 @@ for epoch in range(opt.epochs):
         batch_img1 = autograd.Variable(batch_img1).cuda()
         batch_img2 = autograd.Variable(batch_img2).cuda()
         
-        labels = autograd.Variable(labels).float().cuda()
+        labels = autograd.Variable(labels).long().cuda()
         labels = labels.view(-1, 1, opt.patch_size, opt.patch_size)
 
         preds = model(batch_img1, batch_img2)
         loss = criterion(preds, labels)
 
-        preds = torch.sigmoid(preds) > 0.5
-        corrects = 100 * (preds == labels.byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
+        _, preds = torch.max(preds, 1)
+  
+        corrects = 100 * (preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
     
-        test_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary')
+        test_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
         
         test_losses.append(loss.item())
         test_corrects.append(corrects.item())
@@ -178,7 +195,7 @@ for epoch in range(opt.epochs):
 
     fout.write('train loss : ' + str(train_loss) + ' test loss : ' + str(test_loss) + '\n')
     
-    if test_f1s < best_f1s:
+    if test_f1s > best_f1s:
         torch.save(model, weight_path)
         best_f1s = test_loss
 

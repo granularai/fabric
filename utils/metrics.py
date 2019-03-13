@@ -7,56 +7,157 @@ import torch.optim as optim
 import torch.autograd as autograd
 from torch.autograd import Variable
 
-# From: https://github.com/pytorch/pytorch/issues/1249
-def dice_loss(input, target):
-    input = torch.sigmoid(input)
-    smooth = 1.
-
-    iflat = input.view(-1)
-    tflat = target.view(-1)
-    intersection = (iflat * tflat).sum()
-
-    return 1 - ((2. * intersection + smooth) /
-              (iflat.sum() + tflat.sum() + smooth))
 
 class FocalLoss(nn.Module):
-    def __init__(self, gamma):
-        super().__init__()
+    def __init__(self, gamma=0, alpha=None, size_average=True):
+        super(FocalLoss, self).__init__()
         self.gamma = gamma
+        self.alpha = alpha
+        if isinstance(alpha,(float,int)): self.alpha = torch.Tensor([alpha,1-alpha])
+        if isinstance(alpha,list): self.alpha = torch.Tensor(alpha)
+        self.size_average = size_average
 
     def forward(self, input, target):
-        # Inspired by the implementation of binary_cross_entropy_with_logits
-        if not (target.size() == input.size()):
-            raise ValueError("Target size ({}) must be the same as input size ({})".format(target.size(), input.size()))
+        if input.dim()>2:
+            input = input.view(input.size(0),input.size(1),-1)  # N,C,H,W => N,C,H*W
+            input = input.transpose(1,2)    # N,C,H*W => N,H*W,C
+            input = input.contiguous().view(-1,input.size(2))   # N,H*W,C => N*H*W,C
+        target = target.view(-1,1)
 
-        max_val = (-input).clamp(min=0)
-        loss = input - input * target + max_val + ((-max_val).exp() + (-input - max_val).exp()).log()
+        logpt = F.log_softmax(input)
+        logpt = logpt.gather(1,target)
+        logpt = logpt.view(-1)
+        pt = Variable(logpt.data.exp())
 
-        # This formula gives us the log sigmoid of 1-p if y is 0 and of p if y is 1
-        invprobs = F.logsigmoid(-input * (target * 2 - 1))
-        loss = (invprobs * self.gamma).exp() * loss
+        if self.alpha is not None:
+            if self.alpha.type()!=input.data.type():
+                self.alpha = self.alpha.type_as(input.data)
+            at = self.alpha.gather(0,target.data.view(-1))
+            logpt = logpt * Variable(at)
 
-        return loss.mean()
+        loss = -1 * (1-pt)**self.gamma * logpt
+        if self.size_average: return loss.mean()
+        else: return loss.sum()
+        
 
-def get_loss(loss, weight_factor, gpu_id):
-    if loss == 'dice':
-        print('dice')
-        return dice_loss
-    elif loss == 'focal':
-        print('focal')
-        return FocalLoss(weight_factor)
-    elif loss == 'ce':
-        print('weighted cross entropy')
-        return nn.CrossEntropyLoss(torch.from_numpy(np.asarray([weight_factor, 1-weight_factor])).cuda(gpu_id).float())
+def dice_loss(logits, true, eps=1e-7):
+    """Computes the Sørensen–Dice loss.
+    Note that PyTorch optimizers minimize a loss. In this
+    case, we would like to maximize the dice loss so we
+    return the negated dice loss.
+    Args:
+        true: a tensor of shape [B, 1, H, W].
+        logits: a tensor of shape [B, C, H, W]. Corresponds to
+            the raw output or logits of the model.
+        eps: added to the denominator for numerical stability.
+    Returns:
+        dice_loss: the Sørensen–Dice loss.
+    """
+    num_classes = logits.shape[1]
+    if num_classes == 1:
+        true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1)]
+        true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+        true_1_hot_f = true_1_hot[:, 0:1, :, :]
+        true_1_hot_s = true_1_hot[:, 1:2, :, :]
+        true_1_hot = torch.cat([true_1_hot_s, true_1_hot_f], dim=1)
+        pos_prob = torch.sigmoid(logits)
+        neg_prob = 1 - pos_prob
+        probas = torch.cat([pos_prob, neg_prob], dim=1)
     else:
-        print('bce')
-        return nn.BCEWithLogitsLoss()
+        true_1_hot = torch.eye(num_classes)[true.squeeze(1)]
+        true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+        probas = F.softmax(logits, dim=1)
+    true_1_hot = true_1_hot.type(logits.type())
+    dims = (0,) + tuple(range(2, true.ndimension()))
+    intersection = torch.sum(probas * true_1_hot, dims)
+    cardinality = torch.sum(probas + true_1_hot, dims)
+    dice_loss = (2. * intersection / (cardinality + eps)).mean()
+    return (1 - dice_loss)
 
-def iou(mask1, mask2):
-    return np.sum(mask1 & mask2) / np.sum(mask1 | mask2)
+
+def jaccard_loss(logits, true, eps=1e-7):
+    """Computes the Jaccard loss, a.k.a the IoU loss.
+    Note that PyTorch optimizers minimize a loss. In this
+    case, we would like to maximize the jaccard loss so we
+    return the negated jaccard loss.
+    Args:
+        true: a tensor of shape [B, H, W] or [B, 1, H, W].
+        logits: a tensor of shape [B, C, H, W]. Corresponds to
+            the raw output or logits of the model.
+        eps: added to the denominator for numerical stability.
+    Returns:
+        jacc_loss: the Jaccard loss.
+    """
+    num_classes = logits.shape[1]
+    if num_classes == 1:
+        true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1)]
+        true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+        true_1_hot_f = true_1_hot[:, 0:1, :, :]
+        true_1_hot_s = true_1_hot[:, 1:2, :, :]
+        true_1_hot = torch.cat([true_1_hot_s, true_1_hot_f], dim=1)
+        pos_prob = torch.sigmoid(logits)
+        neg_prob = 1 - pos_prob
+        probas = torch.cat([pos_prob, neg_prob], dim=1)
+    else:
+        true_1_hot = torch.eye(num_classes)[true.squeeze(1)]
+        true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+        probas = F.softmax(logits, dim=1)
+    true_1_hot = true_1_hot.type(logits.type())
+    dims = (0,) + tuple(range(2, true.ndimension()))
+    intersection = torch.sum(probas * true_1_hot, dims)
+    cardinality = torch.sum(probas + true_1_hot, dims)
+    union = cardinality - intersection
+    jacc_loss = (intersection / (union + eps)).mean()
+    return (1 - jacc_loss)
 
 
-def get_iou(mask1, mask2):
-    if np.sum(mask1 & mask2) == 0:
-        return 0
-    return np.sum(mask1 & mask2) / np.sum(mask1 | mask2)
+class TverskyLoss(nn.Module):
+    def __init__(self, alpha=0.5, beta=0.5, eps=1e-7, size_average=True):
+        super(TverskyLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.size_average = size_average
+        self.eps = eps
+
+    def forward(self, logits, true):
+        """Computes the Tversky loss [1].
+        Args:
+            true: a tensor of shape [B, H, W] or [B, 1, H, W].
+            logits: a tensor of shape [B, C, H, W]. Corresponds to
+                the raw output or logits of the model.
+            alpha: controls the penalty for false positives.
+            beta: controls the penalty for false negatives.
+            eps: added to the denominator for numerical stability.
+        Returns:
+            tversky_loss: the Tversky loss.
+        Notes:
+            alpha = beta = 0.5 => dice coeff
+            alpha = beta = 1 => tanimoto coeff
+            alpha + beta = 1 => F beta coeff
+        References:
+            [1]: https://arxiv.org/abs/1706.05721
+        """
+        num_classes = logits.shape[1]
+        if num_classes == 1:
+            true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1)]
+            true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+            true_1_hot_f = true_1_hot[:, 0:1, :, :]
+            true_1_hot_s = true_1_hot[:, 1:2, :, :]
+            true_1_hot = torch.cat([true_1_hot_s, true_1_hot_f], dim=1)
+            pos_prob = torch.sigmoid(logits)
+            neg_prob = 1 - pos_prob
+            probas = torch.cat([pos_prob, neg_prob], dim=1)
+        else:
+            true_1_hot = torch.eye(num_classes)[true.squeeze(1)]
+            true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+            probas = F.softmax(logits, dim=1)
+        
+        true_1_hot = true_1_hot.type(logits.type())
+        dims = (0,) + tuple(range(2, true.ndimension()))
+        intersection = torch.sum(probas * true_1_hot, dims)
+        fps = torch.sum(probas * (1 - true_1_hot), dims)
+        fns = torch.sum((1 - probas) * true_1_hot, dims)
+        num = intersection
+        denom = intersection + (self.alpha * fps) + (self.beta * fns)
+        tversky_loss = (num / (denom + self.eps)).mean()
+        return (1 - tversky_loss)
