@@ -15,8 +15,8 @@ from torchvision import datasets, models, transforms
 
 sys.path.append('.')
 from utils.dataloaders import *
-from models.unet_blocks import *
-from models.metrics_and_losses import *
+from models.bidate_model import *
+from utils.metrics import *
 
 from moonshot import alert
 
@@ -24,9 +24,12 @@ parser = argparse.ArgumentParser(description='Training change detection network'
 
 parser.add_argument('--patch_size', type=int, default=120, required=False, help='input patch size')
 parser.add_argument('--stride', type=int, default=10, required=False, help='stride at which to sample patches')
+parser.add_argument('--aug', default=True, required=False, help='Do augmentation or not')
+
+parser.add_argument('--gpu_ids', default='0,1,2,3', required=False, help='gpus ids for parallel training')
+parser.add_argument('--num_workers', type=int, default=90, required=False, help='Number of cpu workers')
 
 parser.add_argument('--epochs', type=int, default=10, required=False, help='number of eochs to train')
-parser.add_argument('--layers', type=int, default=5, required=False, help='number of layers in unet')
 parser.add_argument('--batch_size', type=int, default=256, required=False, help='batch size for training')
 parser.add_argument('--loss', type=str, default='bce', required=False, help='bce,focal')
 parser.add_argument('--gamma', type=float, default=2, required=False, help='if focal loss is used pass gamma')
@@ -45,13 +48,13 @@ opt = parser.parse_args()
 if opt.loss == 'bce':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
-            '_lr_' + str(opt.lr) + '_layers_' + str(opt.layers) + '_epochs_' + str(opt.epochs) +\
+            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
             '_valCities_' + opt.val_cities 
 
 if opt.loss == 'focal':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_gamma_' + str(opt.gamma) + \
-            '_lr_' + str(opt.lr) + '_layers_' + str(opt.layers) + '_epochs_' + str(opt.epochs) +\
+            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
             '_valCities_' + opt.val_cities 
 
 weight_path = opt.weight_dir + path + '.pt'
@@ -70,14 +73,14 @@ fout.write('\n')
 
 full_load = full_onera_loader(opt.data_dir)
 
-train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load)
-test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load)
+train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug)
+test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug)
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=90)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=90)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 
-model = UNetCD(layers=opt.layers, init_filters=64, num_channels=13, fusion_method='mul', out_dim=1).cuda()
-model = nn.DataParallel(model, device_ids=[0,1,2,3])
+model = BiDateNet(13, 1).cuda()
+model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
 
 if opt.loss == 'bce':
     criterion = nn.BCEWithLogitsLoss()
@@ -112,7 +115,7 @@ for epoch in range(opt.epochs):
         optimizer.step()
         
         preds = torch.sigmoid(preds) > 0.5
-        corrects = 100 * (preds == labels.byte()).sum() / (labels.size()[0] * 120 * 120)
+        corrects = 100 * (preds == labels.byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
         
         train_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary')
         
@@ -153,7 +156,7 @@ for epoch in range(opt.epochs):
         loss = criterion(preds, labels)
 
         preds = torch.sigmoid(preds) > 0.5
-        corrects = 100 * (preds == labels.byte()).sum() / (labels.size()[0] * 120 * 120)
+        corrects = 100 * (preds == labels.byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
     
         test_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary')
         

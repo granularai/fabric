@@ -24,9 +24,34 @@ from torch.autograd import Variable
 from torchvision.transforms import functional
 
 band_ids = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']
-band_maxs = {'B01':19348, 'B02':20566, 'B03':18989, 'B04':17881,
-                'B05':17374, 'B06':17160, 'B07':16950, 'B08':16708,
-                'B8A':16627, 'B09':16204, 'B10': 6000, 'B11':15465, 'B12':15273}
+
+band_means = {'B01': 1617.5661643050978,
+ 'B02': 1422.3719453248793,
+ 'B03': 1359.3729378266555,
+ 'B04': 1414.6782051630655,
+ 'B05': 1557.9375814996074,
+ 'B06': 1986.2235117016169,
+ 'B07': 2210.5037144727444,
+ 'B08': 2118.5600261598356,
+ 'B09': 711.83906025521844,
+ 'B10': 15.75398180230429,
+ 'B11': 2133.9020389587163,
+ 'B12': 1584.2672746823432,
+ 'B8A': 2344.7920358515848}
+
+band_stds = {'B01': 319.11895245135725,
+ 'B02': 456.24958899714318,
+ 'B03': 590.13027145320575,
+ 'B04': 849.36709395436458,
+ 'B05': 811.31234423936974,
+ 'B06': 813.54673546588663,
+ 'B07': 891.84688914609933,
+ 'B08': 901.61466840470621,
+ 'B09': 370.95321479704359,
+ 'B10': 9.2311736178846093,
+ 'B11': 1116.5923795237484,
+ 'B12': 985.12262217902412,
+ 'B8A': 954.76957663021938}
 
 def read_band(band):
     r = rasterio.open(band)
@@ -151,14 +176,14 @@ def stretch_8bit(band, lower_percent=2, higher_percent=98):
 
 
 def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
-    cities = os.listdir(data_dir + 'train_labels/')
+    cities = os.listdir(data_dir + 'labels/')
     cities.sort()
     val_cities = list(map(int, val_cities.split(',')))
     train_cities = list(set(range(len(cities))).difference(val_cities))
 
     train_metadata = []
     for city_no in train_cities:
-        city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
+        city_label = cv2.imread(data_dir + 'labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
 
         for i in range(0, city_label.shape[0], stride):
             for j in range(0, city_label.shape[1], stride):
@@ -167,7 +192,7 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
 
     val_metadata = []
     for city_no in val_cities:
-        city_label = cv2.imread(data_dir + 'train_labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
+        city_label = cv2.imread(data_dir + 'labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
         for i in range(0, city_label.shape[0], patch_size):
             for j in range(0, city_label.shape[1], patch_size):
                 if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
@@ -179,14 +204,39 @@ def label_loader(label_path):
     label = cv2.imread(label_path + '/cm/' + 'cm.png', 0) / 255
     return label
 
+def city_loader(city_meta):
+    city = city_meta[0]
+    h = city_meta[1]
+    w = city_meta[2]
+    
+    band_path = glob.glob(city + '/imgs_1/*')[0][:-7]
+    bands_date1 = []
+    for i in range(len(band_ids)):
+        band = rasterio.open(band_path + band_ids[i] + '.tif').read()[0]
+        band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
+        band = cv2.resize(band, (h,w))
+        bands_date1.append(band)
+        
+    band_path = glob.glob(city + '/imgs_2/*')[0][:-7]
+    bands_date2 = []
+    for i in range(len(band_ids)):
+        band = rasterio.open(band_path + band_ids[i] + '.tif').read()[0]
+        band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
+        band = cv2.resize(band, (h,w))
+        bands_date2.append(band)
+        
+    band_stacked = np.stack((bands_date1, bands_date2))
+    
+    return band_stacked
+    
 def full_onera_loader(path):
-    cities = os.listdir(path + 'train_labels/')
+    cities = os.listdir(path + 'labels/')
 
     
     label_paths = []
     for city in cities:
         if '.txt' not in city:
-            label_paths.append(path + 'train_labels/' + city)
+            label_paths.append(path + 'labels/' + city)
     
     pool = Pool(len(label_paths))
     city_labels = pool.map(label_loader, label_paths)
@@ -197,7 +247,7 @@ def full_onera_loader(path):
         if '.txt' not in city:
             city_paths_meta.append([path + 'images/' + city, city_labels[i].shape[1], city_labels[i].shape[0]])
             i += 1
-            
+    
     city_loads = pool.map(city_loader, city_paths_meta)
     pool.close()
     
@@ -224,21 +274,20 @@ def onera_siamese_loader(dataset, city, x, y, size, aug):
             out_img = np.flip(out_img, axis=3).copy()
             out_lbl = np.flip(out_lbl, axis=1).copy()
             
-    out_img = np.transpose(out_img, (1,0,2,3))
     return out_img[0], out_img[1], out_lbl
 
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, metadata, full_load):
+    def __init__(self, root, metadata, full_load, input_size, aug=False):
         random.shuffle(metadata)
 
         self.full_load = full_load
         self.root = root
         self.imgs = metadata
         self.loader = onera_siamese_loader
-        self.aug = False
-        self.input_size = 120
+        self.aug = aug
+        self.input_size = input_size
 
     def __getitem__(self, index):
         """
