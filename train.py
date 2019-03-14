@@ -48,24 +48,25 @@ parser.add_argument('--log_dir', default='../logs/', required=False, help='direc
 
 opt = parser.parse_args()
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 if opt.loss == 'bce' or opt.loss == 'dice' or opt.loss == 'jaccard':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities 
+            '_valCities_' + opt.val_cities
 
 if opt.loss == 'focal':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_gamma_' + str(opt.gamma) + \
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities 
+            '_valCities_' + opt.val_cities
 
 if opt.loss == 'tversky':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_alpha_' + str(opt.alpha) + '_beta_' + str(opt.beta) + \
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities 
-    
+            '_valCities_' + opt.val_cities
+
 weight_path = opt.weight_dir + path + '.pt'
 log_path = opt.log_dir + path + '.log'
 
@@ -88,9 +89,10 @@ test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_s
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 
-model = BiDateNet(13, 2).cuda()
+model = BiDateNet(13, 2).to(device)
 model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
-model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.1_beta_0.9_lr_0.01_epochs_10_valCities_0,1.pt')
+if 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.1_beta_0.9_lr_0.01_epochs_10_valCities_0,1.pt' in os.listdir(opt.weight_dir):
+    model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.1_beta_0.9_lr_0.01_epochs_10_valCities_0,1.pt')
 
 if opt.loss == 'bce':
     criterion = nn.BCEWithLogitsLoss()
@@ -102,7 +104,7 @@ if opt.loss == 'jaccard':
     criterion = jaccard_loss
 if opt.loss == 'tversky':
     criterion = TverskyLoss(alpha=opt.alpha, beta=opt.beta)
-    
+
 optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
@@ -113,37 +115,37 @@ for epoch in range(opt.epochs):
     train_precisions = []
     train_recalls = []
     train_f1scores = []
-    
+
     model.train()
 
     t = trange(len(train_loader))
     for batch_img1, batch_img2, labels in train_loader:
-        batch_img1 = autograd.Variable(batch_img1).cuda()
-        batch_img2 = autograd.Variable(batch_img2).cuda()
-        
-        labels = autograd.Variable(labels).long().cuda()
+        batch_img1 = autograd.Variable(batch_img1).to(device)
+        batch_img2 = autograd.Variable(batch_img2).to(device)
+
+        labels = autograd.Variable(labels).long().to(device)
 
         optimizer.zero_grad()
         preds = model(batch_img1, batch_img2)
         loss = criterion(preds, labels)
         loss.backward()
         optimizer.step()
-        
+
         _, preds = torch.max(preds, 1)
-        
+
         corrects = 100 * (preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
-        
+
         train_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
-        
+
         train_losses.append(loss.item())
         train_corrects.append(corrects.item())
         train_precisions.append(train_report[0])
         train_recalls.append(train_report[1])
         train_f1scores.append(train_report[2])
-        
+
         t.set_postfix(loss=loss.data.tolist(), accuracy=corrects.data.tolist())
         t.update()
-        
+
     train_loss = np.mean(train_losses)
     train_acc = np.mean(train_corrects)
     train_prec = np.mean(train_precisions)
@@ -153,36 +155,36 @@ for epoch in range(opt.epochs):
 
 
     model.eval()
-    
+
     test_losses = []
     test_corrects = []
     test_precisions = []
     test_recalls = []
     test_f1scores = []
-    
+
     t = trange(len(test_loader))
     for batch_img1, batch_img2, labels in test_loader:
-        batch_img1 = autograd.Variable(batch_img1).cuda()
-        batch_img2 = autograd.Variable(batch_img2).cuda()
-        
-        labels = autograd.Variable(labels).long().cuda()
+        batch_img1 = autograd.Variable(batch_img1).to(device)
+        batch_img2 = autograd.Variable(batch_img2).to(device)
+
+        labels = autograd.Variable(labels).long().to(device)
         labels = labels.view(-1, 1, opt.patch_size, opt.patch_size)
 
         preds = model(batch_img1, batch_img2)
         loss = criterion(preds, labels)
 
         _, preds = torch.max(preds, 1)
-  
+
         corrects = 100 * (preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
-    
+
         test_report = prfs(labels.data.cpu().numpy().flatten(), preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
-        
+
         test_losses.append(loss.item())
         test_corrects.append(corrects.item())
         test_precisions.append(test_report[0])
         test_recalls.append(test_report[1])
         test_f1scores.append(test_report[2])
-        
+
         t.set_postfix(loss=loss.data.tolist(), accuracy=corrects.data.tolist())
         t.update()
 
@@ -194,7 +196,7 @@ for epoch in range(opt.epochs):
     print ('test loss : ', test_loss, ' test accuracy : ', test_acc, ' avg. precision : ', test_prec, 'avg. recall : ', test_rec, ' avg. f1 score : ', test_f1s)
 
     fout.write('train loss : ' + str(train_loss) + ' test loss : ' + str(test_loss) + '\n')
-    
+
     if test_f1s > best_f1s:
         torch.save(model, weight_path)
         best_f1s = test_loss
@@ -259,5 +261,5 @@ for epoch in range(opt.epochs):
             "short": False
         }
     ]})
-    
+
 fout.close()

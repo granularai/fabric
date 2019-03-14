@@ -57,7 +57,7 @@ def read_band(band):
     r = rasterio.open(band)
     data = r.read()[0]
     r.close()
-    return data 
+    return data
 
 def read_bands(band_paths):
     pool = Pool(26)
@@ -77,7 +77,7 @@ def match_bands(date1, date2):
 def _resize(band):
     band = cv2.resize(band, (10980, 10980))
     band = stretch_8bit(band)
-    return band 
+    return band
 
 def stack_bands(bands):
     pool = Pool(26)
@@ -90,19 +90,19 @@ def get_patches(bands):
     patches = image.extract_patches(bands, (64, 64, 13), 64)
     hs, ws = patches.shape[0], patches.shape[1]
     patches = patches.reshape(-1, 64, 64, 13)
-    
+
     last_row = bands[bands.shape[0]-64:,:,:]
     last_column = bands[:,bands.shape[1]-64:,:]
     corner = np.asarray([bands[bands.shape[0]-64:,bands.shape[1]-64:,:]])
-    
+
     last_column = image.extract_patches(last_column, (64,64,13), 64).reshape(-1, 64, 64, 13)
     last_row = image.extract_patches(last_row, (64,64,13), 64).reshape(-1, 64, 64, 13)
 
     lc = last_column.shape[0]
     lr = last_row.shape[0]
-    
+
     patches = np.vstack((patches, last_column, last_row, corner))
-    
+
     return patches, hs, ws, lc, lr, bands.shape[0], bands.shape[1]
 
 def get_bands(patches, hs, ws, lc, lr, h, w):
@@ -110,22 +110,22 @@ def get_bands(patches, hs, ws, lc, lr, h, w):
     last_row = patches[-lr-1:-1]
     last_column = patches[-lc-lr-1:-lr-1]
     patches = patches[:-lc-lr-1]
-    
+
     img = np.zeros((h,w))
     k = 0
     for i in range(hs):
         for j in range(ws):
             img[i*64:i*64+64,j*64:j*64+64] = patches[k]
             k += 1
-    
+
     for i in range(lc):
         img[i*64:i*64+64,w-64:] = last_column[i]
-        
+
     for i in range(lr):
         img[h-64:,i*64:i*64+64] = last_row[i]
-    
+
     img[h-64:,w-64:] = corner
-    
+
     return img
 
 def match_band(source, template):
@@ -182,6 +182,8 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
     train_cities = list(set(range(len(cities))).difference(val_cities))
 
     train_metadata = []
+    print('cities:', cities)
+    print('train_cities:', train_cities)
     for city_no in train_cities:
         city_label = cv2.imread(data_dir + 'labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
 
@@ -208,7 +210,7 @@ def city_loader(city_meta):
     city = city_meta[0]
     h = city_meta[1]
     w = city_meta[2]
-    
+
     band_path = glob.glob(city + '/imgs_1/*')[0][:-7]
     bands_date1 = []
     for i in range(len(band_ids)):
@@ -216,7 +218,7 @@ def city_loader(city_meta):
         band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
         band = cv2.resize(band, (h,w))
         bands_date1.append(band)
-        
+
     band_path = glob.glob(city + '/imgs_2/*')[0][:-7]
     bands_date2 = []
     for i in range(len(band_ids)):
@@ -224,33 +226,33 @@ def city_loader(city_meta):
         band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
         band = cv2.resize(band, (h,w))
         bands_date2.append(band)
-        
+
     band_stacked = np.stack((bands_date1, bands_date2))
-    
+
     return band_stacked
-    
+
 def full_onera_loader(path):
     cities = os.listdir(path + 'labels/')
 
-    
+
     label_paths = []
     for city in cities:
         if '.txt' not in city:
             label_paths.append(path + 'labels/' + city)
-    
+
     pool = Pool(len(label_paths))
     city_labels = pool.map(label_loader, label_paths)
-    
+
     city_paths_meta = []
     i = 0
     for city in cities:
         if '.txt' not in city:
             city_paths_meta.append([path + 'images/' + city, city_labels[i].shape[1], city_labels[i].shape[0]])
             i += 1
-    
+
     city_loads = pool.map(city_loader, city_paths_meta)
     pool.close()
-    
+
     dataset = {}
     for cp in range(len(label_paths)):
         city = label_paths[cp].split('/')[-1]
@@ -265,15 +267,15 @@ def onera_siamese_loader(dataset, city, x, y, size, aug):
         rot_deg = random.randint(0,3)
         out_img = np.rot90(out_img, rot_deg, [2,3]).copy()
         out_lbl = np.rot90(out_lbl, rot_deg, [0,1]).copy()
-        
+
         if random.random() > 0.5:
             out_img = np.flip(out_img, axis=2).copy()
             out_lbl = np.flip(out_lbl, axis=0).copy()
-            
+
         if random.random() > 0.5:
             out_img = np.flip(out_img, axis=3).copy()
             out_lbl = np.flip(out_lbl, axis=1).copy()
-            
+
     return out_img[0], out_img[1], out_lbl
 
 
