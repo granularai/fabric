@@ -48,6 +48,7 @@ parser.add_argument('--log_dir', default='../logs/', required=False, help='direc
 
 opt = parser.parse_args()
 
+
 if opt.loss == 'bce' or opt.loss == 'dice' or opt.loss == 'jaccard':
     path = 'cd_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
@@ -65,7 +66,7 @@ if opt.loss == 'tversky':
             '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_alpha_' + str(opt.alpha) + '_beta_' + str(opt.beta) + \
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
             '_valCities_' + opt.val_cities 
-    
+
 weight_path = opt.weight_dir + path + '.pt'
 log_path = opt.log_dir + path + '.log'
 
@@ -90,7 +91,7 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_siz
 
 model = BiDateNet(13, 2).cuda()
 model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
-model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.1_beta_0.9_lr_0.01_epochs_10_valCities_0,1.pt')
+# model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.08_beta_0.92_lr_0.01_epochs_10_valCities_0,1.pt')
 
 if opt.loss == 'bce':
     criterion = nn.BCEWithLogitsLoss()
@@ -107,6 +108,7 @@ optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
 best_f1s = -1
+best_metric = {}
 for epoch in range(opt.epochs):
     train_losses = []
     train_corrects = []
@@ -144,13 +146,17 @@ for epoch in range(opt.epochs):
         t.set_postfix(loss=loss.data.tolist(), accuracy=corrects.data.tolist())
         t.update()
         
+        del batch_img1
+        del batch_img2
+        del labels
+        
     train_loss = np.mean(train_losses)
     train_acc = np.mean(train_corrects)
     train_prec = np.mean(train_precisions)
     train_rec = np.mean(train_recalls)
     train_f1s = np.mean(train_f1scores)
     print ('train loss : ', train_loss, ' train accuracy : ', train_acc, ' avg. precision : ', train_prec, 'avg. recall : ', train_rec, ' avg. f1 score : ', train_f1s)
-
+    fout.write('train loss : ' + str(train_loss) + ' train accuracy : ' + str(train_acc) + ' avg. precision : ' + str(train_prec) + ' avg. recall : ' + str(train_rec) + ' avg. f1 score : ' + str(train_f1s) + '\n')
 
     model.eval()
     
@@ -185,6 +191,10 @@ for epoch in range(opt.epochs):
         
         t.set_postfix(loss=loss.data.tolist(), accuracy=corrects.data.tolist())
         t.update()
+        
+        del batch_img1
+        del batch_img2
+        del labels
 
     test_loss = np.mean(test_losses)
     test_acc = np.mean(test_corrects)
@@ -192,12 +202,22 @@ for epoch in range(opt.epochs):
     test_rec = np.mean(test_recalls)
     test_f1s = np.mean(test_f1scores)
     print ('test loss : ', test_loss, ' test accuracy : ', test_acc, ' avg. precision : ', test_prec, 'avg. recall : ', test_rec, ' avg. f1 score : ', test_f1s)
-
-    fout.write('train loss : ' + str(train_loss) + ' test loss : ' + str(test_loss) + '\n')
+    fout.write('test loss : ' + str(test_loss) + ' test accuracy : ' + str(test_acc) + ' avg. precision : ' + str(test_prec) + ' avg. recall : ' + str(test_rec) + ' avg. f1 score : ' + str(test_f1s) + '\n')
     
     if test_f1s > best_f1s:
         torch.save(model, weight_path)
-        best_f1s = test_loss
+        best_f1s = test_f1s
+        best_metric['train loss'] = str(train_loss)
+        best_metric['test loss'] = str(test_loss)
+        best_metric['train accuracy'] = str(train_acc)
+        best_metric['test accuracy'] = str(test_acc)
+        best_metric['train avg. precision'] = str(train_prec)
+        best_metric['test avg. precision'] = str(test_prec)
+        best_metric['train avg. recall'] = str(train_rec)
+        best_metric['test avg. recall'] = str(test_rec)
+        best_metric['train avg. f1 score'] = str(train_f1s)
+        best_metric['test avg. f1 score'] = str(test_f1s)
+        
 
     alert.slack_alert({
     'author_name':'Sagar',
@@ -260,4 +280,5 @@ for epoch in range(opt.epochs):
         }
     ]})
     
+fout.write(str(best_metric))
 fout.close()
