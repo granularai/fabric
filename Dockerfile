@@ -12,27 +12,26 @@ ENV SHELL /bin/bash
 
 WORKDIR /code
 
-RUN apt-get -qq update && apt-get -qq -y install curl bzip2 \
-    && curl -sSL https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh \
-    && bash /tmp/miniconda.sh -bfp /usr/local \
-    && rm -rf /tmp/miniconda.sh \
-    && conda update conda \
-    && apt-get -y -qq install python3-dev \
-    && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log \
-    && conda clean --all --yes
+RUN apt-get update && apt-get -y -qq install libglib2.0-0 libsm6 libxext6 libfontconfig1 libxrender1
 
-ENV PATH /opt/conda/bin:$PATH
+RUN pip install torchvision
 
-RUN pip3 install --no-cache-dir -U polyaxon-client==0.4.1
+RUN pip install --no-cache-dir -U polyaxon-client==0.4.1
 
-RUN pip3 install polyaxon-client[gcs]
+RUN pip install polyaxon-client[gcs]
 
-RUN conda install git && git clone https://a9842bc4083b3ca64eebd5af853f42d097165bd7:@github.com/granularai/moonshot
+RUN pip install opencv-python
 
-RUN pip3 install ./moonshot
+RUN pip install tqdm
 
-# RUN conda install -y -c conda-forge --file moonshot/alt_requirements.txt
+RUN pip install pandas
 
-RUN conda install -y -c conda-forge geopandas
+RUN pip install scikit-learn
+
+RUN pip install rasterio
+
+RUN pip install scipy
+
+RUN pip install scikit-image
 
 COPY build /code

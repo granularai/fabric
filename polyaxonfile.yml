@@ -5,35 +5,32 @@ kind: experiment
 
 build:
   dockerfile: Dockerfile
-  # image: tensorflow/tensorflow:1.4.1-py3
-  # build_steps:
-  #   - pip3 install --no-cache-dir -U polyaxon-client==0.4.1
-  #   - pip3 install polyaxon-client[gcs]
-  #   - apt-get -qq update && apt-get -qq -y install curl bzip2 \
-  #   && curl -sSL https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh \
-  #   && bash /tmp/miniconda.sh -bfp /usr/local \
-  #   && rm -rf /tmp/miniconda.sh \
-  #   && conda install -y python=3 \
-  #   && conda update conda \
-  #   && apt-get -qq -y remove curl bzip2 \
-  #   && apt-get -qq -y autoremove \
-  #   && apt-get autoclean \
-  #   && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log \
-  #   && conda clean --all --yes
-  #   - ENV PATH /opt/conda/bin:$PATH
-  #   - conda install -y git
-  #   - git clone
-  #   - conda install -y -c conda-forge --file moonshot/alt_requirements.txt
-  #   - pip3 install moonshot
-
 
 run:
-  cmd:  python3 model.py  # Use default params
+  cmd: python train.py --log_dir=./log/ --data_dir=./onera/ --weight_dir=/outputs/ --batch_size=10 --epochs=1 --loss=focal # Use default params
 
+framework: pytorch
 environment:
+  resources:
+    gpu:
+      requests: 1
+      limits: 1
+  node_selector:
+    polyaxon: exp-gpu
+  replicas:
+    n_workers: 2
+    default_worker:
+      resources:
+        cpu:
+          requests: 1
+          limits: 4
+      node_selector:
+        polyaxon: exp-cpu
+
+
   persistence:
     data: ['data']
     outputs: 'outputs'
 
 logging:
-  level: DEBUG
+  level: INFO
