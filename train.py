@@ -253,8 +253,8 @@ for epoch in range(opt.epochs):
     # fout.write('test loss : ' + str(test_loss) + ' test accuracy : ' + str(test_acc) + ' avg. precision : ' + str(test_prec) + ' avg. recall : ' + str(test_rec) + ' avg. f1 score : ' + str(test_f1s) + '\n')
 
     if test_f1s > best_f1s:
-        torch.save(model, '/tmp/checkpoint_'+str(epoch)+'.pt')
-        experiment.outputs_store.upload_file('/tmp/checkpoint_'+epoch+'.pt')
+        torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
+        experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         best_f1s = test_f1s
         best_metric['train loss'] = str(train_loss)
         best_metric['test loss'] = str(test_loss)
