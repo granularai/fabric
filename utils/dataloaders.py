@@ -207,6 +207,17 @@ def label_loader(label_path):
     label = cv2.imread(label_path + '/cm/' + 'cm.png', 0) / 255
     return label
 
+def mask_loader(mask_path):
+    color_map = {'UrbanBuilt':[255,51,51],'Road':[51,246,255],'NaturalNotWater':[255,51,206],'WaterBodies':[74,32,32],"Ambiguous":[0,0,0]}
+    lbl = cv2.imread(mask_path)
+    mask = np.zeros((lbl.shape[0],lbl.shape[1]))
+    mask[np.all(lbl == [0,0,0], axis=-1)] = 0
+    mask[np.all(lbl == [255,51,51], axis=-1)] = 1
+    mask[np.all(lbl == [51,246,255], axis=-1)] = 2
+    mask[np.all(lbl == [255,51,206], axis=-1)] = 3
+    mask[np.all(lbl == [74,32,32], axis=-1)] = 4
+    return mask
+
 def city_loader(city_meta):
     city = city_meta[0]
     h = city_meta[1]
@@ -232,7 +243,7 @@ def city_loader(city_meta):
 
     return band_stacked
 
-def full_onera_loader(path):
+def full_onera_loader(path, load_mask=False):
     cities = os.listdir(path + 'labels/')
 
 
@@ -252,37 +263,67 @@ def full_onera_loader(path):
             i += 1
 
     city_loads = pool.map(city_loader, city_paths_meta)
+    
+    
+    if load_mask:
+        mask_paths = []
+        for city in cities:
+            if '.txt' not in city:
+                mask_paths.append(path + 'masks/' + city + '.png')
+    
+        city_masks = pool.map(mask_loader, mask_paths)
+    
     pool.close()
-
+    
     dataset = {}
     for cp in range(len(label_paths)):
         city = label_paths[cp].split('/')[-1]
-        dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8)}
-
+        
+        if load_mask:
+            dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8), 'masks': city_masks[cp].astype(np.uint8)}
+        else:
+            dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8)}
+            
     return dataset
 
-def onera_siamese_loader(dataset, city, x, y, size, aug):
+def onera_siamese_loader(dataset, city, x, y, size, aug, load_mask=False):
     out_img = np.copy(dataset[city]['images'][:, : ,x:x+size, y:y+size])
     out_lbl = np.copy(dataset[city]['labels'][x:x+size, y:y+size])
+    
+    if load_mask:
+        out_msk = np.copy(dataset[city]['masks'][x:x+size, y:y+size])
+        
     if aug:
         rot_deg = random.randint(0,3)
         out_img = np.rot90(out_img, rot_deg, [2,3]).copy()
         out_lbl = np.rot90(out_lbl, rot_deg, [0,1]).copy()
-
+        
+        if load_mask:
+            out_msk = np.rot90(out_msk, rot_deg, [0,1]).copy()
+            
         if random.random() > 0.5:
             out_img = np.flip(out_img, axis=2).copy()
             out_lbl = np.flip(out_lbl, axis=0).copy()
-
+            
+            if load_mask:
+                out_msk = np.flip(out_msk, axis=0).copy()
+                
         if random.random() > 0.5:
             out_img = np.flip(out_img, axis=3).copy()
             out_lbl = np.flip(out_lbl, axis=1).copy()
-
-    return out_img[0], out_img[1], out_lbl
+            
+            if load_mask:
+                out_msk = np.flip(out_msk, axis=1).copy()
+    
+    if load_mask:
+        return out_img[0], out_img[1], out_lbl, out_msk
+    else:
+        return out_img[0], out_img[1], out_lbl
 
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, metadata, full_load, input_size, aug=False):
+    def __init__(self, root, metadata, full_load, input_size, aug=False, load_mask=False):
         random.shuffle(metadata)
 
         self.full_load = full_load
@@ -290,6 +331,7 @@ class OneraPreloader(data.Dataset):
         self.imgs = metadata
         self.loader = onera_siamese_loader
         self.aug = aug
+        self.load_mask = load_mask
         self.input_size = input_size
 
     def __getitem__(self, index):
@@ -302,7 +344,7 @@ class OneraPreloader(data.Dataset):
         """
         city, x, y = self.imgs[index]
 
-        return self.loader(self.full_load, city, x, y, self.input_size, self.aug)
+        return self.loader(self.full_load, city, x, y, self.input_size, self.aug. self.load_mask)
 
     def __len__(self):
         return len(self.imgs)
