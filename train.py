@@ -126,7 +126,7 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_siz
 logging.info('LOADING Model')
 
 model = BiDateNet(13, 2).to(device)
-# model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
+model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
 #
 # if os.path.exists(opt.weight_dir) and weight_file in os.listdir(opt.weight_dir):
 #     model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.08_beta_0.92_lr_0.01_epochs_10_valCities_0,1.pt')
@@ -250,8 +250,6 @@ for epoch in range(opt.epochs):
     test_f1s = np.mean(test_f1scores)
     print ('test loss : ', test_loss, ' test accuracy : ', test_acc, ' avg. precision : ', test_prec, 'avg. recall : ', test_rec, ' avg. f1 score : ', test_f1s)
 
-    # fout.write('test loss : ' + str(test_loss) + ' test accuracy : ' + str(test_acc) + ' avg. precision : ' + str(test_prec) + ' avg. recall : ' + str(test_rec) + ' avg. f1 score : ' + str(test_f1s) + '\n')
-
     if test_f1s > best_f1s:
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
@@ -267,67 +265,6 @@ for epoch in range(opt.epochs):
         best_metric['train avg. f1 score'] = str(train_f1s)
         best_metric['test avg. f1 score'] = str(test_f1s)
 
-    # alert.slack_alert({
-    # 'author_name':'Sagar',
-    # 'text':'UNet-BiDate: Change Detection',
-    # 'fields':[
-    #     {
-    #         "title": "Progress",
-    #         "value": str(epoch) + '/' + str(opt.epochs) + " epochs",
-    #         "short": False
-    #      },
-    #     {
-    #         "title": "Train Accuracy",
-    #         "value": str(train_acc),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Train Loss",
-    #         "value": str(train_loss),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Train Average Precision",
-    #         "value": str(train_prec),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Train Average Recall",
-    #         "value": str(train_rec),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Train Average F1 Score",
-    #         "value": str(train_f1s),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Test Accuracy",
-    #         "value": str(test_acc),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Test Loss",
-    #         "value": str(test_loss),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Test Average Precision",
-    #         "value": str(test_prec),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Test Average Recall",
-    #         "value": str(test_rec),
-    #         "short": False
-    #     },
-    #     {
-    #         "title": "Test Average F1 Score",
-    #         "value": str(test_f1s),
-    #         "short": False
-    #     }
-    # ]})
-
     experiment.log_metrics(epoch=epoch,
                             train_f1_score=train_f1s,
                             train_recall=train_rec,
@@ -339,6 +276,3 @@ for epoch in range(opt.epochs):
                             test_prec=test_prec,
                             test_loss=test_loss,
                             test_accuracy=test_acc)
-
-# fout.write(str(best_metric))
-# fout.close()

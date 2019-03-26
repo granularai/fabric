@@ -34,4 +34,8 @@ RUN pip install scipy
 
 RUN pip install scikit-image
 
+RUN  pip install --no-cache-dir -U polyaxon-helper
+
+RUN  pip install --no-cache-dir -U polyaxon-gpustat
+
 COPY build /code

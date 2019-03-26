@@ -1,2 +1,0 @@
-Namespace(alpha=0.5, aug=True, batch_size=100, beta=0.5, data_dir='./datasets/onera/', epochs=1, gamma=2, gpu_ids='0,1,2,3', log_dir='./log/', loss='focal', lr=0.01, num_workers=90, patch_size=120, stride=10, val_cities='0,1', weight_dir='./weights/')
-train samples:40019 test samples:48
