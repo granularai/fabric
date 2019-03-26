@@ -263,58 +263,58 @@ def full_onera_loader(path, load_mask=False):
             i += 1
 
     city_loads = pool.map(city_loader, city_paths_meta)
-    
-    
+
+
     if load_mask:
         mask_paths = []
         for city in cities:
             if '.txt' not in city:
                 mask_paths.append(path + 'masks/' + city + '.png')
-    
+
         city_masks = pool.map(mask_loader, mask_paths)
-    
+
     pool.close()
-    
+
     dataset = {}
     for cp in range(len(label_paths)):
         city = label_paths[cp].split('/')[-1]
-        
+
         if load_mask:
             dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8), 'masks': city_masks[cp].astype(np.uint8)}
         else:
             dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8)}
-            
+
     return dataset
 
 def onera_siamese_loader(dataset, city, x, y, size, aug, load_mask=False):
     out_img = np.copy(dataset[city]['images'][:, : ,x:x+size, y:y+size])
     out_lbl = np.copy(dataset[city]['labels'][x:x+size, y:y+size])
-    
+
     if load_mask:
         out_msk = np.copy(dataset[city]['masks'][x:x+size, y:y+size])
-        
+
     if aug:
         rot_deg = random.randint(0,3)
         out_img = np.rot90(out_img, rot_deg, [2,3]).copy()
         out_lbl = np.rot90(out_lbl, rot_deg, [0,1]).copy()
-        
+
         if load_mask:
             out_msk = np.rot90(out_msk, rot_deg, [0,1]).copy()
-            
+
         if random.random() > 0.5:
             out_img = np.flip(out_img, axis=2).copy()
             out_lbl = np.flip(out_lbl, axis=0).copy()
-            
+
             if load_mask:
                 out_msk = np.flip(out_msk, axis=0).copy()
-                
+
         if random.random() > 0.5:
             out_img = np.flip(out_img, axis=3).copy()
             out_lbl = np.flip(out_lbl, axis=1).copy()
-            
+
             if load_mask:
                 out_msk = np.flip(out_msk, axis=1).copy()
-    
+
     if load_mask:
         return out_img[0], out_img[1], out_lbl, out_msk
     else:
@@ -344,7 +344,7 @@ class OneraPreloader(data.Dataset):
         """
         city, x, y = self.imgs[index]
 
-        return self.loader(self.full_load, city, x, y, self.input_size, self.aug. self.load_mask)
+        return self.loader(self.full_load, city, x, y, self.input_size, self.aug, self.load_mask)
 
     def __len__(self):
         return len(self.imgs)
