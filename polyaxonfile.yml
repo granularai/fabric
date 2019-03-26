@@ -7,7 +7,7 @@ build:
   dockerfile: Dockerfile
 
 run:
-  cmd: python train.py \
+  cmd: python train_lulc_cd.py \
    --log_dir=./log/ \
    --data_dir=./onera/ \
    --weight_dir=/outputs/ \
