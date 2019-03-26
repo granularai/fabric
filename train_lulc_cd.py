@@ -1,3 +1,4 @@
+from comet_ml import Experiment as CometExperiment
 import sys, glob, cv2, random, math, argparse
 import numpy as np
 import pandas as pd
@@ -20,7 +21,7 @@ from utils.metrics import *
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
-from comet_ml import Experiment as CometExperiment
+
 
 
 # from moonshot import alert
@@ -28,7 +29,7 @@ from comet_ml import Experiment as CometExperiment
 
 import logging
 
-comet = CometExperiment(project_name="cd_lulc")
+comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -253,7 +254,7 @@ with comet.train():
             lulc_train_recalls.append(lulc_train_report[1])
             lulc_train_f1scores.append(lulc_train_report[2])
 
-            t.set_postfix(cd_loss=cd_loss.data.tolist(), lulc_loss=lulc_loss.data.tolist(), cd_accuracy=cd_corrects.data.tolist(), lulc_accuracy=lulc_accuracy.data.tolist())
+            t.set_postfix(cd_loss=cd_loss.data.tolist(), lulc_loss=lulc_loss.data.tolist(), cd_accuracy=cd_corrects.data.tolist(), lulc_accuracy=lulc_corrects.data.tolist())
             t.update()
 
             del batch_img1
@@ -324,7 +325,7 @@ with comet.train():
             lulc_test_recalls.append(lulc_test_report[1])
             lulc_test_f1scores.append(lulc_test_report[2])
 
-            t.set_postfix(cd_loss=cd_loss.data.tolist(), lulc_loss=lulc_loss.data.tolist(), cd_accuracy=cd_corrects.data.tolist(), lulc_accuracy=lulc_accuracy.data.tolist())
+            t.set_postfix(cd_loss=cd_loss.data.tolist(), lulc_loss=lulc_loss.data.tolist(), cd_accuracy=cd_corrects.data.tolist(), lulc_accuracy=lulc_corrects.data.tolist())
             t.update()
 
             del batch_img1
