@@ -34,6 +34,8 @@ RUN pip install scipy
 
 RUN pip install scikit-image
 
+RUN pip install comet_ml
+
 RUN  pip install --no-cache-dir -U polyaxon-helper
 
 RUN  pip install --no-cache-dir -U polyaxon-gpustat
