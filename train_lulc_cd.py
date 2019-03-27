@@ -22,22 +22,22 @@ from utils.metrics import *
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
 
-
-
-# from moonshot import alert
-
-
 import logging
 
-comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc")
 
+###
+### Initialize experiments for polyaxon and comet.ml
+###
+
+comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc")
+experiment = Experiment()
 logging.basicConfig(level=logging.INFO)
 
 
-def get_weight_filename(weight_file):
-    return '{}/{}'.format(get_outputs_path(), 'checkpoint.pth.tar')
 
-
+###
+### Initialize Parser and define arguments
+###
 
 parser = argparse.ArgumentParser(description='Training change detection network')
 
@@ -64,47 +64,19 @@ parser.add_argument('--val_cities', default='0,1', required=False, help='''citie
 
 parser.add_argument('--data_dir', default='../datasets/onera/', required=False, help='data directory for training')
 parser.add_argument('--weight_dir', default='../weights/', required=False, help='directory to save weights')
-parser.add_argument('--weight_file', default='', required=False, help='if defined and available, will preload weights from this file')
 parser.add_argument('--log_dir', default='../logs/', required=False, help='directory to save training log')
-
 
 opt = parser.parse_args()
 
-if opt.mask:
-    model_name = 'lulc_cd'
-else:
-    model_name = 'cd'
 
-if opt.loss == 'bce' or opt.loss == 'dice' or opt.loss == 'jaccard':
-    path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
-            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities
+###
+### Set up environment: define paths, download data, and set device
+###
 
-if opt.loss == 'focal':
-    path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_gamma_' + str(opt.gamma) + \
-            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities
-
-if opt.loss == 'tversky':
-    path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_alpha_' + str(opt.alpha) + '_beta_' + str(opt.beta) + \
-            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities
-
-weight_file = opt.weight_file
-
-weight_path = opt.weight_dir + path + '.pt'
-log_path = opt.log_dir + path + '.log'
-
+weight_path, log_path = define_output_paths(opt)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 logging.info('GPU AVAILABLE? ' + str(torch.cuda.is_available()))
-logging.info('STARTING data download')
-data_paths = list(get_data_paths().values())[0]
-data_store = StoreManager(path=data_paths)
-data_store.download_dir('onera')
-experiment = Experiment()
+download_dataset('onera_w_mask.tar.gz')
 
 train_samples, test_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
 print ('train samples : ', len(train_samples))
@@ -122,41 +94,31 @@ logging.info('STARTING Dataloading')
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
 
-logging.info('LOADING Model')
 
-if opt.mask:
-    model = BiDateLULCNet(13, 2, 5).to(device)
-    model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
-else:
-    model = BiDateNet(13, 2).to(device)
-    model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
-#
 # if os.path.exists(opt.weight_dir) and weight_file in os.listdir(opt.weight_dir):
 #     model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.08_beta_0.92_lr_0.01_epochs_10_valCities_0,1.pt')
 
-if opt.loss == 'bce':
-    criterion = nn.BCEWithLogitsLoss()
-if opt.loss == 'focal':
-    criterion = FocalLoss(opt.gamma)
-if opt.loss == 'dice':
-    criterion = dice_loss
-if opt.loss == 'jaccard':
-    criterion = jaccard_loss
-if opt.loss == 'tversky':
-    criterion = TverskyLoss(alpha=opt.alpha, beta=opt.beta)
+###
+### Load Model then define other aspects of the model
+###
 
-if opt.mask:
-    criterion_lulc = nn.CrossEntropyLoss()
+logging.info('LOADING Model')
+model = load_model(opt, device)
 
+criterion = get_criterion(opt)
+criterion_lulc = opt.mask ? nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
+###
+### Set starting values
+###
 cd_best_f1s = -1
 best_metric = {}
 
-logging.info('STARTING training')
 
 with comet.train():
+    logging.info('STARTING training')
     for epoch in range(opt.epochs):
 
         cd_train_losses = []
@@ -175,8 +137,6 @@ with comet.train():
         model.train()
         logging.info('SET model mode to train!')
 
-        # t = trange(len(train_loader))
-        # logging.info(t)
         batch_iter = 0
         for batch_img1, batch_img2, labels, masks in train_loader:
             logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
@@ -216,9 +176,6 @@ with comet.train():
             lulc_train_precisions.append(lulc_train_report[0])
             lulc_train_recalls.append(lulc_train_report[1])
             lulc_train_f1scores.append(lulc_train_report[2])
-
-            # t.set_postfix(cd_loss=cd_loss.data.tolist(), lulc_loss=lulc_loss.data.tolist(), cd_accuracy=cd_corrects.data.tolist(), lulc_accuracy=lulc_corrects.data.tolist())
-            # t.update()
 
             del batch_img1
             del batch_img2

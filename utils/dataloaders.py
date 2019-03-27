@@ -230,7 +230,13 @@ def get_train_test_metadata(data_dir, patch_size, stride):
 
     return train_metadata, val_metadata
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+
 def label_loader(label_path):
+    logging.info(label_path)
     label = cv2.imread(label_path + '/cm/' + 'cm.png', 0) / 255
     return label
 
