@@ -110,43 +110,6 @@ train_samples, test_samples = get_train_val_metadata(opt.data_dir, opt.val_citie
 print ('train samples : ', len(train_samples))
 print ('test samples : ', len(test_samples))
 
-
-if opt.mask:
-    experiment.log_metrics(epoch=0,
-                        cd_train_f1_score=0,
-                        cd_train_recall=0,
-                        cd_train_prec=0,
-                        cd_train_loss=0,
-                        cd_train_accuracy=0,
-                        cd_test_f1_score=0,
-                        cd_test_recall=0,
-                        cd_test_prec=0,
-                        cd_test_loss=0,
-                        cd_test_accuracy=0,
-                        lulc_train_f1_score=0,
-                        lulc_train_recall=0,
-                        lulc_train_prec=0,
-                        lulc_train_loss=0,
-                        lulc_train_accuracy=0,
-                        lulc_test_f1_score=0,
-                        lulc_test_recall=0,
-                        lulc_test_prec=0,
-                        lulc_test_loss=0,
-                        lulc_test_accuracy=0)
-else:
-    experiment.log_metrics(epoch=0,
-                            cd_train_f1_score=0,
-                            cd_train_recall=0,
-                            cd_train_prec=0,
-                            cd_train_loss=0,
-                            cd_train_accuracy=0,
-                            cd_test_f1_score=0,
-                            cd_test_recall=0,
-                            cd_test_prec=0,
-                            cd_test_loss=0,
-                            cd_test_accuracy=0)
-
-
 logging.info('STARTING Dataset Creation')
 
 full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
