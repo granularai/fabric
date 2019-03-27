@@ -11,11 +11,11 @@ run:
    --log_dir=./log/ \
    --data_dir=./onera/ \
    --weight_dir=/outputs/ \
-   --batch_size=128 \
+   --batch_size=256 \
    --epochs=20 \
    --patch_size=90 \
    --stride=10 \
-   --lr=0.1
+   --lr=0.01
 
 framework: pytorch
 environment:
