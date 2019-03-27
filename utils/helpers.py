@@ -1,14 +1,54 @@
 import logging
-from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
+from polyaxon_client.tracking import get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
 import time
 import tarfile
+
+
+import torch
+import torch.utils.data
+import torch.nn as nn
+
+
+from dataloaders import *
+from bidate_model import *
+from metrics import *
 
 
 logging.basicConfig(level=logging.INFO)
 
 
 
+def get_loaders(opt):
+    """Given user arguments, loads dataset metadata, loads full onera dataset, defines a preloader and returns train and test dataloaders
+
+    Parameters
+    ----------
+    opt : dict
+        Dictionary of options/flags
+
+    Returns
+    -------
+    (DataLoader, DataLoader)
+        returns train and test dataloaders
+
+    """
+    train_samples, test_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
+    print('train samples : ', len(train_samples))
+    print('test samples : ', len(test_samples))
+
+    logging.info('STARTING Dataset Creation')
+
+    full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
+
+    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+    test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+
+    logging.info('STARTING Dataloading')
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
+    return train_loader, test_loader
 
 
 

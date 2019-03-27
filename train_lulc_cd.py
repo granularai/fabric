@@ -18,6 +18,7 @@ sys.path.append('.')
 from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
+from utils.helpers import get_loaders, define_output_path, download_dataset, get_criterion, load_model
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -32,6 +33,7 @@ import logging
 comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc")
 experiment = Experiment()
 logging.basicConfig(level=logging.INFO)
+
 
 
 
@@ -69,6 +71,8 @@ parser.add_argument('--log_dir', default='../logs/', required=False, help='direc
 opt = parser.parse_args()
 
 
+
+
 ###
 ### Set up environment: define paths, download data, and set device
 ###
@@ -77,26 +81,9 @@ weight_path, log_path = define_output_paths(opt)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 logging.info('GPU AVAILABLE? ' + str(torch.cuda.is_available()))
 download_dataset('onera_w_mask.tar.gz')
-
-train_samples, test_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
-print ('train samples : ', len(train_samples))
-print ('test samples : ', len(test_samples))
-
-logging.info('STARTING Dataset Creation')
-
-full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
-
-train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-
-logging.info('STARTING Dataloading')
-
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
+train_loader, test_loader = get_loaders(opt)
 
 
-# if os.path.exists(opt.weight_dir) and weight_file in os.listdir(opt.weight_dir):
-#     model = torch.load(opt.weight_dir + 'cd_patchSize_90_stride_10_batchSize_512_loss_tversky_alpha_0.08_beta_0.92_lr_0.01_epochs_10_valCities_0,1.pt')
 
 ###
 ### Load Model then define other aspects of the model
@@ -110,6 +97,8 @@ criterion_lulc = opt.mask ? nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
+
+
 ###
 ### Set starting values
 ###
@@ -117,6 +106,10 @@ cd_best_f1s = -1
 best_metric = {}
 
 
+
+###
+### Begin Training
+###
 with comet.train():
     logging.info('STARTING training')
     for epoch in range(opt.epochs):
@@ -212,7 +205,6 @@ with comet.train():
         lulc_test_recalls = []
         lulc_test_f1scores = []
 
-        # t = trange(len(test_loader))
         for batch_img1, batch_img2, labels, masks in test_loader:
             batch_img1 = autograd.Variable(batch_img1).to(device)
             batch_img2 = autograd.Variable(batch_img2).to(device)
