@@ -53,10 +53,6 @@ parser.add_argument('--epochs', type=int, default=10, required=False, help='numb
 parser.add_argument('--batch_size', type=int, default=256, required=False, help='batch size for training')
 parser.add_argument('--lr', type=float, default=0.01, required=False, help='Learning rate')
 
-parser.add_argument('--val_cities', default='0,1', required=False, help='''cities to use for validation,
-                            0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, 5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai,
-                            9:nantes, 10:paris, 11:pisa, 12:rennes, 14:saclay_e''')
-
 parser.add_argument('--data_dir', default='../datasets/onera/', required=False, help='data directory for training')
 parser.add_argument('--weight_dir', default='../weights/', required=False, help='directory to save weights')
 parser.add_argument('--weight_file', default='', required=False, help='if defined and available, will preload weights from this file')
@@ -68,9 +64,8 @@ opt = parser.parse_args()
 model_name = 'lulc'
 
 path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
-            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-            '_valCities_' + opt.val_cities
+            '_batchSize_' + str(opt.batch_size)  + \
+            '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs)
 
 
 weight_file = opt.weight_file
@@ -86,7 +81,7 @@ data_store = StoreManager(path=data_paths)
 data_store.download_dir('onera')
 experiment = Experiment()
 
-train_samples, test_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
+train_samples, test_samples = get_train_test_metadata(opt.data_dir, opt.patch_size, opt.stride)
 print ('train samples : ', len(train_samples))
 print ('test samples : ', len(test_samples))
 
@@ -107,10 +102,10 @@ experiment.log_metrics(epoch=0,
 
 logging.info('STARTING Dataset Creation')
 
-full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
+full_load = full_onera_loader(opt.data_dir, True, False)
 
-train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, True, False)
+test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, True, False)
 
 logging.info('STARTING Dataloading')
 
@@ -150,8 +145,8 @@ with comet.train():
         # t = trange(len(train_loader))
         # logging.info(t)
         batch_iter = 0
-        for _, batch_img2, _, masks in train_loader:
-            logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
+        for _, batch_img2, masks in train_loader:
+            # logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img2 = autograd.Variable(batch_img2).to(device)
             masks = autograd.Variable(masks).long().to(device)
@@ -200,7 +195,7 @@ with comet.train():
         lulc_test_f1scores = []
 
         # t = trange(len(test_loader))
-        for _, batch_img2, _, masks in test_loader:
+        for _, batch_img2, masks in test_loader:
             batch_img2 = autograd.Variable(batch_img2).to(device)
             masks = autograd.Variable(masks).long().to(device)
 
