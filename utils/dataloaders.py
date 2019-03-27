@@ -212,19 +212,21 @@ def get_train_test_metadata(data_dir, patch_size, stride):
 
     train_metadata = []
     for city in train_cities:
-        print (data_dir + 'masks/' + city + '.png')
-        city_label = cv2.imread(data_dir + 'masks/' + city + '.png')
-
-        for i in range(0, city_label.shape[0], stride):
-            for j in range(0, city_label.shape[1], stride):
-                train_metadata.append([city, i, j])
+        if '.txt' not in city:
+            city_label = cv2.imread(data_dir + 'masks/' + city + '.png')
+            for i in range(0, city_label.shape[0], stride):
+                for j in range(0, city_label.shape[1], stride):
+                    if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
+                        train_metadata.append([city, i, j])
 
     val_metadata = []
     for city in val_cities:
-        city_label = cv2.imread(data_dir + 'masks/' + city + '.png')
-        for i in range(0, city_label.shape[0], patch_size):
-            for j in range(0, city_label.shape[1], patch_size):
-                val_metadata.append([city, i, j])
+        if '.txt' not in city:
+            city_label = cv2.imread(data_dir + 'masks/' + city + '.png')
+            for i in range(0, city_label.shape[0], patch_size):
+                for j in range(0, city_label.shape[1], patch_size):
+                    if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
+                        val_metadata.append([city, i, j])
 
     return train_metadata, val_metadata
 
@@ -271,34 +273,31 @@ def city_loader(city_meta):
 def full_onera_loader(path, load_mask=False):
     cities = os.listdir(path + 'labels/')
 
-
-    label_paths = []
-    for city in cities:
-        if '.txt' not in city:
-            label_paths.append(path + 'labels/' + city)
-
-    pool = Pool(len(label_paths))
-    city_labels = pool.map(label_loader, label_paths)
-
-    cities = os.listdir(path + 'images/')
-    city_paths_meta = []
-    i = 0
-    for city in cities:
-        if '.txt' not in city:
-            city_paths_meta.append([path + 'images/' + city, city_labels[i].shape[1], city_labels[i].shape[0]])
-            i += 1
-
-    city_loads = pool.map(city_loader, city_paths_meta)
-
-
     if load_mask:
         mask_paths = []
         for city in cities:
             if '.txt' not in city:
                 mask_paths.append(path + 'masks/' + city + '.png')
 
+        pool = Pool(len(mask_paths))
         city_masks = pool.map(mask_loader, mask_paths)
 
+    city_paths_meta = []
+    i = 0
+    for city in cities:
+        if '.txt' not in city:
+            city_paths_meta.append([path + 'images/' + city, city_masks[i].shape[1], city_masks[i].shape[0]])
+            i += 1
+
+    city_loads = pool.map(city_loader, city_paths_meta)
+
+    cities = os.listdir(path + 'labels/')
+    label_paths = []
+    for city in cities:
+        if '.txt' not in city:
+            label_paths.append(path + 'labels/' + city)
+
+    city_labels = pool.map(label_loader, label_paths)
     pool.close()
 
     dataset = {}
