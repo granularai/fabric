@@ -271,7 +271,7 @@ def city_loader(city_meta):
     return band_stacked
 
 def full_onera_loader(path, load_mask=False, load_label=False):
-    cities = os.listdir(path + 'images/')
+    cities = [i for i in os.listdir(path + 'images/') if not i.startswith('.') and os.path.isdir(path+'images/'+i)]
 
     if load_mask:
         mask_paths = []
