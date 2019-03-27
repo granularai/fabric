@@ -68,7 +68,7 @@ opt = parser.parse_args()
 model_name = 'lulc'
 
 path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-            '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
+            '_batchSize_' + str(opt.batch_size)  + \
             '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
             '_valCities_' + opt.val_cities
 
@@ -151,7 +151,7 @@ with comet.train():
         # logging.info(t)
         batch_iter = 0
         for _, batch_img2, _, masks in train_loader:
-            logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
+            # logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img2 = autograd.Variable(batch_img2).to(device)
             masks = autograd.Variable(masks).long().to(device)
