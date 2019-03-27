@@ -271,7 +271,7 @@ def city_loader(city_meta):
     return band_stacked
 
 def full_onera_loader(path, load_mask=False, load_label=False):
-    cities = os.listdir(path + 'labels/')
+    cities = os.listdir(path + 'images/')
 
     if load_mask:
         mask_paths = []
@@ -302,15 +302,15 @@ def full_onera_loader(path, load_mask=False, load_label=False):
     pool.close()
 
     dataset = {}
-    for cp in range(len(mask_paths)):
-        city = mask_paths[cp].split('/')[-1]
+    for cp in range(len(cities)):
+        city = cities[cp]
 
         if load_mask and load_label:
-            dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8), 'masks': city_masks[cp].astype(np.uint8)}
+            dataset[city] = {'images':city_loads[cp], 'labels': city_labels[cp].astype(np.uint8), 'masks': city_masks[cp].astype(np.uint8)}
         elif load_mask:
-            dataset[city] = {'images':city_loads[cp] , 'masks': city_masks[cp].astype(np.uint8)}
+            dataset[city] = {'images':city_loads[cp], 'masks': city_masks[cp].astype(np.uint8)}
         elif load_label:
-            dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8)}
+            dataset[city] = {'images':city_loads[cp], 'labels': city_labels[cp].astype(np.uint8)}
 
     return dataset
 
