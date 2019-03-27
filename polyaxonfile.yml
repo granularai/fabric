@@ -11,9 +11,14 @@ run:
    --log_dir=./log/ \
    --data_dir=./onera/ \
    --weight_dir=/outputs/ \
-   --batch_size=100 \
-   --epochs=5 \
-   --loss=focal # Use default params
+   --batch_size=128 \
+   --epochs=20 \
+   --patch_size=90 \
+   --stride=50 \
+   --loss=tversky \
+   --alpha=0.1 \
+   --beta=0.9 \
+   --lr=0.1
 
 framework: pytorch
 environment:
