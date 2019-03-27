@@ -5,8 +5,8 @@ This is the github repository containing the code for the paper ["Detecting Urba
 ## Requirements
 The code has been tested on:
 
-- Nvidia P100 GPU
-- Ubuntu 18.04 LTS on 62 vCPUs and 240 GB of RAM (Large scale inference will be slower on other configurations)
+- 4xNvidia P100 GPU
+- Ubuntu 18.04 LTS on 96 vCPUs and 240 GB of RAM (Large scale inference will be slower on other configurations)
 - [Pytorch](https://pytorch.org/) v0.4.0
 - Opencv 3.0
 
