@@ -102,7 +102,7 @@ experiment.log_metrics(epoch=0,
 
 logging.info('STARTING Dataset Creation')
 
-full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
+full_load = full_onera_loader(opt.data_dir, True, False)
 
 train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, True, False)
 test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, True, False)
