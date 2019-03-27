@@ -303,7 +303,7 @@ def full_onera_loader(path, load_mask=False, load_label=False):
 
     dataset = {}
     for cp in range(len(mask_paths)):
-        city = label_paths[cp].split('/')[-1]
+        city = mask_paths[cp].split('/')[-1]
 
         if load_mask and load_label:
             dataset[city] = {'images':city_loads[cp] , 'labels': city_labels[cp].astype(np.uint8), 'masks': city_masks[cp].astype(np.uint8)}
