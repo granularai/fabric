@@ -19,7 +19,7 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 from utils.parser import get_parser_with_args
-from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_train_metrics, set_test_metrics
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_train_metrics, set_val_metrics
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -53,7 +53,7 @@ weight_path, log_path = define_output_paths(opt)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 logging.info('GPU AVAILABLE? ' + str(torch.cuda.is_available()))
 download_dataset('onera_w_mask.tar.gz', comet)
-train_loader, test_loader = get_loaders(opt)
+train_loader, val_loader = get_loaders(opt)
 
 
 
@@ -75,7 +75,7 @@ optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 ### Set starting values
 ###
 
-best_metrics = {'cd_test_f1scores':-1}
+best_metrics = {'cd_val_f1scores':-1}
 
 
 
@@ -85,7 +85,7 @@ best_metrics = {'cd_test_f1scores':-1}
 logging.info('STARTING training')
 for epoch in range(opt.epochs):
 
-    train_metrics, test_metrics = initialize_metrics()
+    train_metrics, val_metrics = initialize_metrics()
     with comet.train():
         model.train()
         logging.info('SET model mode to train!')
@@ -128,7 +128,7 @@ for epoch in range(opt.epochs):
     with comet.validate():
         model.eval()
 
-        for batch_img1, batch_img2, labels, masks in test_loader:
+        for batch_img1, batch_img2, labels, masks in val_loader:
             batch_img1 = autograd.Variable(batch_img1).to(device)
             batch_img2 = autograd.Variable(batch_img2).to(device)
 
@@ -144,26 +144,25 @@ for epoch in range(opt.epochs):
 
             cd_corrects = 100 * (cd_preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
             lulc_corrects = 100 * (lulc_preds.byte() == masks.squeeze().byte()).sum() / (masks.size()[0] * opt.patch_size * opt.patch_size)
-            cd_test_report = prfs(labels.data.cpu().numpy().flatten(), cd_preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
-            lulc_test_report = prfs(masks.data.cpu().numpy().flatten(), lulc_preds.data.cpu().numpy().flatten(), average='weighted')
+            cd_val_report = prfs(labels.data.cpu().numpy().flatten(), cd_preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
+            lulc_val_report = prfs(masks.data.cpu().numpy().flatten(), lulc_preds.data.cpu().numpy().flatten(), average='weighted')
 
 
-            test_metrics = set_test_metrics(test_metrics, cd_loss, cd_corrects, cd_test_report, lulc_loss, lulc_corrects, lulc_test_report)
-            mean_test_metrics = get_mean_metrics(test_metrics)
-            comet.log_metrics(mean_test_metrics)
+            val_metrics = set_val_metrics(val_metrics, cd_loss, cd_corrects, cd_val_report, lulc_loss, lulc_corrects, lulc_val_report)
+            mean_val_metrics = get_mean_metrics(val_metrics)
+            comet.log_metrics(mean_val_metrics)
 
             del batch_img1, batch_img2, labels, masks
 
+        print (mean_val_metrics)
 
-        print (mean_test_metrics)
-
-    if mean_test_metrics['cd_test_f1scores'] > best_metrics['cd_test_f1scores']:
+    if mean_val_metrics['cd_val_f1scores'] > best_metrics['cd_val_f1scores']:
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
-        best_metrics = mean_test_metrics
+        best_metrics = mean_val_metrics
 
     epoch_metrics = {'epoch':epoch,
-                        **mean_train_metrics, **mean_test_metrics}
+                        **mean_train_metrics, **mean_val_metrics}
 
     experiment.log_metrics(**epoch_metrics)
     comet.log_epoch_end(epoch)

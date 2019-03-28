@@ -36,20 +36,20 @@ def initialize_metrics():
         'lulc_train_f1scores': []
     }
 
-    cd_test_metrics={
-        'cd_test_losses': [],
-        'cd_test_corrects': [],
-        'cd_test_precisions': [],
-        'cd_test_recalls': [],
-        'cd_test_f1scores': [],
-        'lulc_test_losses': [],
-        'lulc_test_corrects': [],
-        'lulc_test_precisions': [],
-        'lulc_test_recalls': [],
-        'lulc_test_f1scores': []
+    cd_val_metrics={
+        'cd_val_losses': [],
+        'cd_val_corrects': [],
+        'cd_val_precisions': [],
+        'cd_val_recalls': [],
+        'cd_val_f1scores': [],
+        'lulc_val_losses': [],
+        'lulc_val_corrects': [],
+        'lulc_val_precisions': [],
+        'lulc_val_recalls': [],
+        'lulc_val_f1scores': []
     }
 
-    return cd_train_metrics, cd_test_metrics
+    return cd_train_metrics, cd_val_metrics
 
 def get_mean_metrics(metric_dict):
     return {k:np.mean(v) for k,v in metric_dict.items()}
@@ -70,18 +70,18 @@ def set_train_metrics(metric_dict, cd_loss, cd_corrects, cd_train_report, lulc_l
     return metric_dict
 
 
-def set_test_metrics(metric_dict, cd_loss, cd_corrects, cd_test_report, lulc_loss, lulc_corrects, lulc_test_report):
-    metric_dict['cd_test_losses'].append(cd_loss.item())
-    metric_dict['cd_test_corrects'].append(cd_corrects.item())
-    metric_dict['cd_test_precisions'].append(cd_test_report[0])
-    metric_dict['cd_test_recalls'].append(cd_test_report[1])
-    metric_dict['cd_test_f1scores'].append(cd_test_report[2])
+def set_val_metrics(metric_dict, cd_loss, cd_corrects, cd_val_report, lulc_loss, lulc_corrects, lulc_val_report):
+    metric_dict['cd_val_losses'].append(cd_loss.item())
+    metric_dict['cd_val_corrects'].append(cd_corrects.item())
+    metric_dict['cd_val_precisions'].append(cd_val_report[0])
+    metric_dict['cd_val_recalls'].append(cd_val_report[1])
+    metric_dict['cd_val_f1scores'].append(cd_val_report[2])
 
-    metric_dict['lulc_test_losses'].append(lulc_loss.item())
-    metric_dict['lulc_test_corrects'].append(lulc_corrects.item())
-    metric_dict['lulc_test_precisions'].append(lulc_test_report[0])
-    metric_dict['lulc_test_recalls'].append(lulc_test_report[1])
-    metric_dict['lulc_test_f1scores'].append(lulc_test_report[2])
+    metric_dict['lulc_val_losses'].append(lulc_loss.item())
+    metric_dict['lulc_val_corrects'].append(lulc_corrects.item())
+    metric_dict['lulc_val_precisions'].append(lulc_val_report[0])
+    metric_dict['lulc_val_recalls'].append(lulc_val_report[1])
+    metric_dict['lulc_val_f1scores'].append(lulc_val_report[2])
 
     return metric_dict
 
@@ -89,7 +89,7 @@ def set_test_metrics(metric_dict, cd_loss, cd_corrects, cd_test_report, lulc_los
 
 
 def get_loaders(opt):
-    """Given user arguments, loads dataset metadata, loads full onera dataset, defines a preloader and returns train and test dataloaders
+    """Given user arguments, loads dataset metadata, loads full onera dataset, defines a preloader and returns train and val dataloaders
 
     Parameters
     ----------
@@ -99,25 +99,25 @@ def get_loaders(opt):
     Returns
     -------
     (DataLoader, DataLoader)
-        returns train and test dataloaders
+        returns train and val dataloaders
 
     """
-    train_samples, test_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
+    train_samples, val_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
     print('train samples : ', len(train_samples))
-    print('test samples : ', len(test_samples))
+    print('val samples : ', len(val_samples))
 
     logging.info('STARTING Dataset Creation')
 
     full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
 
     train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-    test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+    val_dataset = OneraPreloader(opt.data_dir, val_samples, full_load, opt.patch_size, opt.aug, opt.mask)
 
     logging.info('STARTING Dataloading')
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
-    return train_loader, test_loader
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
+    return train_loader, val_loader
 
 
 
