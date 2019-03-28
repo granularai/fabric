@@ -2,7 +2,7 @@ import argparse
 
 def get_parser_with_args():
     parser = argparse.ArgumentParser(description='Training change detection network')
-
+    parser.add_argument('--dataset', type=int, required=True, help='gcs dataset file or directory')
     parser.add_argument('--patch_size', type=int, default=120, required=False, help='input patch size')
     parser.add_argument('--stride', type=int, default=10, required=False, help='stride at which to sample patches')
     parser.add_argument('--aug', default=True, required=False, help='Do augmentation or not')
