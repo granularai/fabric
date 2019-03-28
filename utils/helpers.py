@@ -21,6 +21,73 @@ logging.basicConfig(level=logging.INFO)
 
 
 
+
+def initialize_metrics():
+    cd_train_metrics={
+        'cd_train_losses': [],
+        'cd_train_corrects': [],
+        'cd_train_precisions': [],
+        'cd_train_recalls': [],
+        'cd_train_f1scores': [],
+        'lulc_train_losses': [],
+        'lulc_train_corrects': [],
+        'lulc_train_precisions': [],
+        'lulc_train_recalls': [],
+        'lulc_train_f1scores': []
+    }
+
+    cd_test_metrics={
+        'cd_test_losses': [],
+        'cd_test_corrects': [],
+        'cd_test_precisions': [],
+        'cd_test_recalls': [],
+        'cd_test_f1scores': [],
+        'lulc_test_losses': [],
+        'lulc_test_corrects': [],
+        'lulc_test_precisions': [],
+        'lulc_test_recalls': [],
+        'lulc_test_f1scores': []
+    }
+
+    return cd_train_metrics, cd_test_metrics
+
+def get_mean_metrics(metric_dict):
+    return {k:np.mean(v) for k,v in metric_dict.items()}
+
+def set_train_metrics(metric_dict, cd_loss, cd_corrects, cd_train_report, lulc_loss, lulc_corrects, lulc_train_report):
+    metric_dict['cd_train_losses'].append(cd_loss.item())
+    metric_dict['cd_train_corrects'].append(cd_corrects.item())
+    metric_dict['cd_train_precisions'].append(cd_train_report[0])
+    metric_dict['cd_train_recalls'].append(cd_train_report[1])
+    metric_dict['cd_train_f1scores'].append(cd_train_report[2])
+
+    metric_dict['lulc_train_losses'].append(lulc_loss.item())
+    metric_dict['lulc_train_corrects'].append(lulc_corrects.item())
+    metric_dict['lulc_train_precisions'].append(lulc_train_report[0])
+    metric_dict['lulc_train_recalls'].append(lulc_train_report[1])
+    metric_dict['lulc_train_f1scores'].append(lulc_train_report[2])
+
+    return metric_dict
+
+
+def set_test_metrics(metric_dict, cd_loss, cd_corrects, cd_test_report, lulc_loss, lulc_corrects, lulc_test_report):
+    metric_dict['cd_test_losses'].append(cd_loss.item())
+    metric_dict['cd_test_corrects'].append(cd_corrects.item())
+    metric_dict['cd_test_precisions'].append(cd_test_report[0])
+    metric_dict['cd_test_recalls'].append(cd_test_report[1])
+    metric_dict['cd_test_f1scores'].append(cd_test_report[2])
+
+    metric_dict['lulc_test_losses'].append(lulc_loss.item())
+    metric_dict['lulc_test_corrects'].append(lulc_corrects.item())
+    metric_dict['lulc_test_precisions'].append(lulc_test_report[0])
+    metric_dict['lulc_test_recalls'].append(lulc_test_report[1])
+    metric_dict['lulc_test_f1scores'].append(lulc_test_report[2])
+
+    return metric_dict
+
+
+
+
 def get_loaders(opt):
     """Given user arguments, loads dataset metadata, loads full onera dataset, defines a preloader and returns train and test dataloaders
 
