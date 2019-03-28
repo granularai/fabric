@@ -130,7 +130,7 @@ with comet.train():
         model.train()
         logging.info('SET model mode to train!')
         batch_iter = 0
-        for batch_img1, batch_img2, labels, masks in enumerate(train_loader):
+        for batch_img1, batch_img2, labels, masks in train_loader:
             logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img1 = autograd.Variable(batch_img1).to(device)

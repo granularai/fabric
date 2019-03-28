@@ -41,10 +41,10 @@ def get_loaders(opt):
 
     logging.info('STARTING Dataset Creation')
 
-    full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask, load_label=True)
+    full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
 
-    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask, load_label=True)
-    test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask, load_label=True)
+    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+    test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask)
 
     logging.info('STARTING Dataloading')
 
