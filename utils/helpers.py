@@ -54,7 +54,7 @@ def get_loaders(opt):
 
 
 
-def download_dataset(target_dataset):
+def download_dataset(target_dataset, comet):
     """download and extract the dataset from GCS
 
     Parameters
@@ -68,10 +68,12 @@ def download_dataset(target_dataset):
     data_store = StoreManager(path=data_paths)
 
     logging.info('STARTING tar download')
+    comet.log_dataset_info(name=target_dataset, version=None, path=data_paths)
     start = time.time()
     data_store.download_file(target_dataset)
     end = time.time()
     logging.info('DOWNLOAD time taken: '+ str(end - start))
+    comet.log_dataset_hash(target_dataset)
     if target_dataset.endswith('.tar.gz'):
         logging.info('STARTING untarring')
         tf = tarfile.open(target_dataset)
