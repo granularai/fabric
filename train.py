@@ -52,7 +52,7 @@ opt = parser.parse_args()
 weight_path, log_path = define_output_paths(opt)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 logging.info('GPU AVAILABLE? ' + str(torch.cuda.is_available()))
-download_dataset('onera_w_mask.tar.gz', comet)
+download_dataset(opt.dataset, comet)
 train_loader, val_loader = get_loaders(opt)
 
 

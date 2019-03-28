@@ -7,7 +7,8 @@ build:
   dockerfile: Dockerfile
 
 run:
-  cmd: python train_lulc_cd.py \
+  cmd: python train.py \
+   --dataset=onera_w_mask.tar.gz
    --log_dir=./log/ \
    --data_dir=./onera/ \
    --weight_dir=/outputs/ \
