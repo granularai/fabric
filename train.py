@@ -32,6 +32,7 @@ import logging
 ###
 
 comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc")
+comet.log_other('status', 'started')
 experiment = Experiment()
 logging.basicConfig(level=logging.INFO)
 
@@ -84,7 +85,6 @@ best_metrics = {'cd_val_f1scores':-1}
 ###
 logging.info('STARTING training')
 for epoch in range(opt.epochs):
-
     train_metrics, val_metrics = initialize_metrics()
     with comet.train():
         model.train()
@@ -165,4 +165,6 @@ for epoch in range(opt.epochs):
                         **mean_train_metrics, **mean_val_metrics}
 
     experiment.log_metrics(**epoch_metrics)
+    comet.log_other('status', 'running') # this is placed after the first epoch because this likely means the training process is sound
     comet.log_epoch_end(epoch)
+comet.log_other('status', 'complete')
