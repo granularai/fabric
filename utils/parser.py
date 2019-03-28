@@ -2,7 +2,6 @@ import argparse
 
 def get_parser_with_args():
     parser = argparse.ArgumentParser(description='Training change detection network')
-    parser.add_argument('--dataset', type=int, required=True, help='gcs dataset file or directory')
     parser.add_argument('--patch_size', type=int, default=120, required=False, help='input patch size')
     parser.add_argument('--stride', type=int, default=10, required=False, help='stride at which to sample patches')
     parser.add_argument('--aug', default=True, required=False, help='Do augmentation or not')
@@ -24,6 +23,7 @@ def get_parser_with_args():
                                 0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, 5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai,
                                 9:nantes, 10:paris, 11:pisa, 12:rennes, 14:saclay_e''')
 
+    parser.add_argument('--dataset', type=str, required=True, help='gcs dataset file or directory')
     parser.add_argument('--data_dir', default='../datasets/onera/', required=False, help='data directory for training')
     parser.add_argument('--weight_dir', default='../weights/', required=False, help='directory to save weights')
     parser.add_argument('--log_dir', default='../logs/', required=False, help='directory to save training log')
