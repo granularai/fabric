@@ -19,7 +19,7 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 from utils.parser import get_parser_with_args
-from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_train_metrics, set_val_metrics
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -76,7 +76,7 @@ optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 ### Set starting values
 ###
 
-best_metrics = {'cd_val_f1scores':-1}
+best_metrics = {'cd_f1scores':-1}
 
 
 
@@ -85,7 +85,8 @@ best_metrics = {'cd_val_f1scores':-1}
 ###
 logging.info('STARTING training')
 for epoch in range(opt.epochs):
-    train_metrics, val_metrics = initialize_metrics()
+    train_metrics = initialize_metrics()
+    val_metrics = initialize_metrics()
     with comet.train():
         model.train()
         logging.info('SET model mode to train!')
@@ -116,14 +117,14 @@ for epoch in range(opt.epochs):
             cd_train_report = prfs(labels.data.cpu().numpy().flatten(), cd_preds.data.cpu().numpy().flatten(), average='binary', pos_label=1)
             lulc_train_report = prfs(masks.data.cpu().numpy().flatten(), lulc_preds.data.cpu().numpy().flatten(), average='weighted')
 
-            train_metrics = set_train_metrics(train_metrics, cd_loss, cd_corrects, cd_train_report, lulc_loss, lulc_corrects, lulc_train_report)
+            train_metrics = set_metrics(train_metrics, cd_loss, cd_corrects, cd_train_report, lulc_loss, lulc_corrects, lulc_train_report)
             mean_train_metrics = get_mean_metrics(train_metrics)
             comet.log_metrics(mean_train_metrics)
 
             del batch_img1, batch_img2, labels, masks
 
 
-        print(mean_train_metrics)
+        print("EPOCH TRAIN METRICS", mean_train_metrics)
 
     with comet.validate():
         model.eval()
@@ -148,21 +149,23 @@ for epoch in range(opt.epochs):
             lulc_val_report = prfs(masks.data.cpu().numpy().flatten(), lulc_preds.data.cpu().numpy().flatten(), average='weighted')
 
 
-            val_metrics = set_val_metrics(val_metrics, cd_loss, cd_corrects, cd_val_report, lulc_loss, lulc_corrects, lulc_val_report)
+            val_metrics = set_metrics(val_metrics, cd_loss, cd_corrects, cd_val_report, lulc_loss, lulc_corrects, lulc_val_report)
             mean_val_metrics = get_mean_metrics(val_metrics)
             comet.log_metrics(mean_val_metrics)
-
+            # comet.log_image()
             del batch_img1, batch_img2, labels, masks
 
-        print (mean_val_metrics)
+        print ("EPOCH VALIDATION METRICS", mean_val_metrics)
 
-    if mean_val_metrics['cd_val_f1scores'] > best_metrics['cd_val_f1scores']:
+    if mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']:
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         best_metrics = mean_val_metrics
 
+    log_train_metrics = {"train_"+k:v for k,v in mean_train_metrics.items()}
+    log_val_metrics = {"train_"+k:v for k,v in mean_val_metrics.items()}
     epoch_metrics = {'epoch':epoch,
-                        **mean_train_metrics, **mean_val_metrics}
+                        **log_train_metrics, **log_val_metrics}
 
     experiment.log_metrics(**epoch_metrics)
     comet.log_other('status', 'running') # this is placed after the first epoch because this likely means the training process is sound

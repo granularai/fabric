@@ -23,68 +23,37 @@ logging.basicConfig(level=logging.INFO)
 
 
 def initialize_metrics():
-    cd_train_metrics={
-        'cd_train_losses': [],
-        'cd_train_corrects': [],
-        'cd_train_precisions': [],
-        'cd_train_recalls': [],
-        'cd_train_f1scores': [],
-        'lulc_train_losses': [],
-        'lulc_train_corrects': [],
-        'lulc_train_precisions': [],
-        'lulc_train_recalls': [],
-        'lulc_train_f1scores': []
+    metrics={
+        'cd_losses': [],
+        'cd_corrects': [],
+        'cd_precisions': [],
+        'cd_recalls': [],
+        'cd_f1scores': [],
+        'lulc_losses': [],
+        'lulc_corrects': [],
+        'lulc_precisions': [],
+        'lulc_recalls': [],
+        'lulc_f1scores': []
     }
 
-    cd_val_metrics={
-        'cd_val_losses': [],
-        'cd_val_corrects': [],
-        'cd_val_precisions': [],
-        'cd_val_recalls': [],
-        'cd_val_f1scores': [],
-        'lulc_val_losses': [],
-        'lulc_val_corrects': [],
-        'lulc_val_precisions': [],
-        'lulc_val_recalls': [],
-        'lulc_val_f1scores': []
-    }
-
-    return cd_train_metrics, cd_val_metrics
+    return metrics
 
 def get_mean_metrics(metric_dict):
     return {k:np.mean(v) for k,v in metric_dict.items()}
 
-def set_train_metrics(metric_dict, cd_loss, cd_corrects, cd_train_report, lulc_loss, lulc_corrects, lulc_train_report):
-    metric_dict['cd_train_losses'].append(cd_loss.item())
-    metric_dict['cd_train_corrects'].append(cd_corrects.item())
-    metric_dict['cd_train_precisions'].append(cd_train_report[0])
-    metric_dict['cd_train_recalls'].append(cd_train_report[1])
-    metric_dict['cd_train_f1scores'].append(cd_train_report[2])
-
-    metric_dict['lulc_train_losses'].append(lulc_loss.item())
-    metric_dict['lulc_train_corrects'].append(lulc_corrects.item())
-    metric_dict['lulc_train_precisions'].append(lulc_train_report[0])
-    metric_dict['lulc_train_recalls'].append(lulc_train_report[1])
-    metric_dict['lulc_train_f1scores'].append(lulc_train_report[2])
-
-    return metric_dict
-
-
-def set_val_metrics(metric_dict, cd_loss, cd_corrects, cd_val_report, lulc_loss, lulc_corrects, lulc_val_report):
-    metric_dict['cd_val_losses'].append(cd_loss.item())
-    metric_dict['cd_val_corrects'].append(cd_corrects.item())
-    metric_dict['cd_val_precisions'].append(cd_val_report[0])
-    metric_dict['cd_val_recalls'].append(cd_val_report[1])
-    metric_dict['cd_val_f1scores'].append(cd_val_report[2])
-
-    metric_dict['lulc_val_losses'].append(lulc_loss.item())
-    metric_dict['lulc_val_corrects'].append(lulc_corrects.item())
-    metric_dict['lulc_val_precisions'].append(lulc_val_report[0])
-    metric_dict['lulc_val_recalls'].append(lulc_val_report[1])
-    metric_dict['lulc_val_f1scores'].append(lulc_val_report[2])
+def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report, lulc_loss, lulc_corrects, lulc_report):
+    metric_dict['cd_losses'].append(cd_loss.item())
+    metric_dict['cd_corrects'].append(cd_corrects.item())
+    metric_dict['cd_precisions'].append(cd_report[0])
+    metric_dict['cd_recalls'].append(cd_report[1])
+    metric_dict['cd_f1scores'].append(cd_report[2])
+    metric_dict['lulc_losses'].append(lulc_loss.item())
+    metric_dict['lulc_corrects'].append(lulc_corrects.item())
+    metric_dict['lulc_precisions'].append(lulc_report[0])
+    metric_dict['lulc_recalls'].append(lulc_report[1])
+    metric_dict['lulc_f1scores'].append(lulc_report[2])
 
     return metric_dict
-
 
 
 
