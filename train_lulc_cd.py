@@ -257,28 +257,7 @@ with comet.train():
             best_metric['lulc train avg. f1 score'] = str(lulc_train_f1s)
             best_metric['lulc test avg. f1 score'] = str(lulc_test_f1s)
 
-        experiment.log_metrics(epoch=epoch,
-                                cd_train_f1_score=cd_train_f1s,
-                                cd_train_recall=cd_train_rec,
-                                cd_train_prec=cd_train_prec,
-                                cd_train_loss=cd_train_loss,
-                                cd_train_accuracy=cd_train_acc,
-                                cd_test_f1_score=cd_test_f1s,
-                                cd_test_recall=cd_test_rec,
-                                cd_test_prec=cd_test_prec,
-                                cd_test_loss=cd_test_loss,
-                                cd_test_accuracy=cd_test_acc,
-                                lulc_train_f1_score=lulc_train_f1s,
-                                lulc_train_recall=lulc_train_rec,
-                                lulc_train_prec=lulc_train_prec,
-                                lulc_train_loss=lulc_train_loss,
-                                lulc_train_accuracy=lulc_train_acc,
-                                lulc_test_f1_score=lulc_test_f1s,
-                                lulc_test_recall=lulc_test_rec,
-                                lulc_test_prec=lulc_test_prec,
-                                lulc_test_loss=lulc_test_loss,
-                                lulc_test_accuracy=lulc_test_acc)
-        comet.log_metrics({'epoch':epoch,
+        epoch_metrics = {'epoch':epoch,
                             'cd_train_f1_score':cd_train_f1s,
                             'cd_train_recall':cd_train_rec,
                             'cd_train_prec':cd_train_prec,
@@ -298,4 +277,8 @@ with comet.train():
                             'lulc_test_recall':lulc_test_rec,
                             'lulc_test_prec':lulc_test_prec,
                             'lulc_test_loss':lulc_test_loss,
-                            'lulc_test_accuracy':lulc_test_acc})
+                            'lulc_test_accuracy':lulc_test_acc}
+
+        experiment.log_metrics(**epoch_metrics)
+        comet.log_metrics(epoch_metrics)
+        comet.log_epoch_end(epoch)
