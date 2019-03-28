@@ -9,10 +9,12 @@ import torch
 import torch.utils.data
 import torch.nn as nn
 
+import sys
 
-from dataloaders import *
-from bidate_model import *
-from metrics import *
+sys.path.append('..')
+from utils.dataloaders import *
+from models.bidate_model import *
+from utils.metrics import *
 
 
 logging.basicConfig(level=logging.INFO)
@@ -39,10 +41,10 @@ def get_loaders(opt):
 
     logging.info('STARTING Dataset Creation')
 
-    full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
+    full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask, load_label=True)
 
-    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-    test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask, load_label=True)
+    test_dataset = OneraPreloader(opt.data_dir, test_samples, full_load, opt.patch_size, opt.aug, opt.mask, load_label=True)
 
     logging.info('STARTING Dataloading')
 
@@ -79,7 +81,7 @@ def download_dataset(target_dataset):
 
 
 
-def define_output_path(opt):
+def define_output_paths(opt):
     """Uses user defined options (or defaults) to define an appropriate output path
 
     Parameters

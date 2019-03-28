@@ -18,7 +18,7 @@ sys.path.append('.')
 from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
-from utils.helpers import get_loaders, define_output_path, download_dataset, get_criterion, load_model
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -93,7 +93,7 @@ logging.info('LOADING Model')
 model = load_model(opt, device)
 
 criterion = get_criterion(opt)
-criterion_lulc = opt.mask ? nn.CrossEntropyLoss()
+criterion_lulc = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 
 
@@ -129,9 +129,8 @@ with comet.train():
 
         model.train()
         logging.info('SET model mode to train!')
-
         batch_iter = 0
-        for batch_img1, batch_img2, labels, masks in train_loader:
+        for batch_img1, batch_img2, labels, masks in enumerate(train_loader):
             logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img1 = autograd.Variable(batch_img1).to(device)

@@ -177,7 +177,7 @@ def stretch_8bit(band, lower_percent=2, higher_percent=98):
 
 
 def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
-    cities = os.listdir(data_dir + 'labels/')
+    cities = [i for i in os.listdir(data_dir + 'labels/') if not i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
     cities.sort()
     val_cities = list(map(int, val_cities.split(',')))
     train_cities = list(set(range(len(cities))).difference(val_cities))
@@ -205,9 +205,9 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
 
 
 def get_train_test_metadata(data_dir, patch_size, stride):
-    cities = os.listdir(data_dir + 'images/')
+    cities = [i for i in os.listdir(path + 'images/') if not i.startswith('.') and os.path.isdir(path+'images/'+i)]
     cities.sort()
-    val_cities = os.listdir(data_dir + 'labels/')
+    val_cities = [i for i in os.listdir(data_dir + 'labels/') if not i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
     train_cities = list(set(cities).difference(val_cities))
 
     train_metadata = []
@@ -230,13 +230,7 @@ def get_train_test_metadata(data_dir, patch_size, stride):
 
     return train_metadata, val_metadata
 
-import logging
-
-logging.basicConfig(level=logging.INFO)
-
-
 def label_loader(label_path):
-    logging.info(label_path)
     label = cv2.imread(label_path + '/cm/' + 'cm.png', 0) / 255
     return label
 
@@ -298,7 +292,7 @@ def full_onera_loader(path, load_mask=False, load_label=False):
     city_loads = pool.map(city_loader, city_paths_meta)
 
     if load_label:
-        cities = os.listdir(path + 'labels/')
+        cities = [i for i in os.listdir(path + 'labels/') if not i.startswith('.') and os.path.isdir(path+'labels/'+i)]
         label_paths = []
         for city in cities:
             if '.txt' not in city:
