@@ -57,16 +57,6 @@ def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report, lulc_loss, lulc_co
     return metric_dict
 
 def log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lulc_preds):
-    # batch_img1
-    # img.save(filename)
-    # comet.log_image(filename)
-    print('batch_img1 shape', batch_img1.shape)
-    print('batch_img2 shape', batch_img2.shape)
-    print('labels shape', labels.shape)
-    print('masks shape', masks.shape)
-    print('cd_preds shape', cd_preds.shape)
-    print('lulc_preds shape', lulc_preds.shape)
-
     batch_size = batch_img1.shape[0]
     samples = list(range(0,batch_size,10))
     for sample in samples:
