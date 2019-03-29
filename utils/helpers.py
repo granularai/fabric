@@ -129,12 +129,12 @@ def get_loaders(opt):
     full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
 
     train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-    val_dataset = OneraPreloader(opt.data_dir, val_samples, full_load, opt.patch_size, opt.aug, opt.mask)
+    val_dataset = OneraPreloader(opt.data_dir, val_samples, full_load, opt.patch_size, False, opt.mask)
 
     logging.info('STARTING Dataloading')
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=opt.num_workers)
     return train_loader, val_loader
 
 

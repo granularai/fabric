@@ -45,7 +45,7 @@ logging.basicConfig(level=logging.INFO)
 
 parser = get_parser_with_args()
 opt = parser.parse_args()
-# comet.log_parameters(opt)
+comet.log_parameters(vars(opt))
 
 ###
 ### Set up environment: define paths, download data, and set device
@@ -130,6 +130,7 @@ for epoch in range(opt.epochs):
     with comet.validate():
         model.eval()
 
+        first_batch = True
         for batch_img1, batch_img2, labels, masks in val_loader:
             batch_img1 = autograd.Variable(batch_img1).to(device)
             batch_img2 = autograd.Variable(batch_img2).to(device)
@@ -145,7 +146,9 @@ for epoch in range(opt.epochs):
             _, cd_preds = torch.max(cd_preds, 1)
             _, lulc_preds = torch.max(lulc_preds, 1)
 
-            log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lulc_preds)
+            if first_batch:
+                log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lulc_preds)
+                first_batch=False
 
             cd_corrects = 100 * (cd_preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
             lulc_corrects = 100 * (lulc_preds.byte() == masks.squeeze().byte()).sum() / (masks.size()[0] * opt.patch_size * opt.patch_size)
