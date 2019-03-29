@@ -31,7 +31,7 @@ import logging
 ### Initialize experiments for polyaxon and comet.ml
 ###
 
-comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc")
+comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc", auto_param_logging=False, parse_args=False)
 comet.log_other('status', 'started')
 experiment = Experiment()
 logging.basicConfig(level=logging.INFO)

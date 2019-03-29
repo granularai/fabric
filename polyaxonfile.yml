@@ -13,7 +13,7 @@ run:
    --data_dir=./onera/ \
    --weight_dir=/outputs/ \
    --batch_size=128 \
-   --epochs=1 \
+   --epochs=10 \
    --patch_size=90 \
    --stride=50 \
    --loss=tversky \
