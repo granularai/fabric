@@ -83,15 +83,15 @@ def log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lu
 
 def _denorm_image(image_tensor, sample):
     np_arr = torch.flip(image_tensor[sample][1:4,:,:],[0]).permute(1,2,0).cpu().numpy()
-    return ((255 / np_arr.ptp()) * (np_arr+np_arr.min())).astype(int)
+    return _scale(np_arr).astype(int)
+
+def _scale(x, out_range=(0, 255)):
+    domain = np.min(x), np.max(x)
+    y = (x - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
+    return y * (out_range[1] - out_range[0]) + (out_range[1] + out_range[0]) / 2
 
 def _log_figure(comet, batch1_img, batch2_img, groundtruth, prediction, fig_name=''):
     fig, axarr = plt.subplots(1,4)
-    print(batch1_img.min())
-    print(batch1_img.max())
-    print(batch2_img.min())
-    print(batch2_img.max())
-
     axarr[0].set_title("Date 1")
     axarr[0].imshow(batch1_img)
     axarr[1].set_title("Date 2")

@@ -45,6 +45,7 @@ logging.basicConfig(level=logging.INFO)
 
 parser = get_parser_with_args()
 opt = parser.parse_args()
+# comet.log_parameters(opt)
 
 ###
 ### Set up environment: define paths, download data, and set device
