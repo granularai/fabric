@@ -19,7 +19,7 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 from utils.parser import get_parser_with_args
-from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_images
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -137,11 +137,14 @@ for epoch in range(opt.epochs):
             masks = autograd.Variable(masks).long().to(device)
 
             cd_preds, lulc_preds = model(batch_img1, batch_img2)
+
             cd_loss = criterion(cd_preds, labels)
             lulc_loss = criterion_lulc(lulc_preds, masks)
 
             _, cd_preds = torch.max(cd_preds, 1)
             _, lulc_preds = torch.max(lulc_preds, 1)
+
+            log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lulc_preds)
 
             cd_corrects = 100 * (cd_preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)
             lulc_corrects = 100 * (lulc_preds.byte() == masks.squeeze().byte()).sum() / (masks.size()[0] * opt.patch_size * opt.patch_size)
@@ -152,7 +155,6 @@ for epoch in range(opt.epochs):
             val_metrics = set_metrics(val_metrics, cd_loss, cd_corrects, cd_val_report, lulc_loss, lulc_corrects, lulc_val_report)
             mean_val_metrics = get_mean_metrics(val_metrics)
             comet.log_metrics(mean_val_metrics)
-            # comet.log_image()
             del batch_img1, batch_img2, labels, masks
 
         print ("EPOCH VALIDATION METRICS", mean_val_metrics)

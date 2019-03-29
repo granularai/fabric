@@ -16,6 +16,7 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.INFO)
 
@@ -54,6 +55,54 @@ def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report, lulc_loss, lulc_co
     metric_dict['lulc_f1scores'].append(lulc_report[2])
 
     return metric_dict
+
+def log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lulc_preds):
+    # batch_img1
+    # img.save(filename)
+    # comet.log_image(filename)
+    print('batch_img1 shape', batch_img1.shape)
+    print('batch_img2 shape', batch_img2.shape)
+    print('labels shape', labels.shape)
+    print('masks shape', masks.shape)
+    print('cd_preds shape', cd_preds.shape)
+    print('lulc_preds shape', lulc_preds.shape)
+
+    batch_size = batch_img1.shape[0]
+    samples = list(range(0,batch_size,10))
+    for sample in samples:
+        sample_img1 = _denorm_image(batch_img1, sample)
+        sample_img2 = _denorm_image(batch_img2, sample)
+
+        #log cd
+        cd_figname='epoch_'+str(epoch)+'_change_detection_sample_'+str(sample)
+        _log_figure(comet, sample_img1, sample_img2, labels[sample], cd_preds[sample], fig_name=cd_figname)
+
+        #log lulc
+        lulc_figname='epoch_'+str(epoch)+'_landuse_landcover_sample_'+str(sample)
+        _log_figure(comet, sample_img1, sample_img2, masks[sample], lulc_preds[sample], fig_name=lulc_figname)
+
+def _denorm_image(image_tensor, sample):
+    np_arr = torch.flip(image_tensor[sample][1:4,:,:],[0]).permute(1,2,0).cpu().numpy()
+    return ((255 / np_arr.ptp()) * (np_arr+np_arr.min())).astype(int)
+
+def _log_figure(comet, batch1_img, batch2_img, groundtruth, prediction, fig_name=''):
+    fig, axarr = plt.subplots(1,4)
+    print(batch1_img.min())
+    print(batch1_img.max())
+    print(batch2_img.min())
+    print(batch2_img.max())
+
+    axarr[0].set_title("Date 1")
+    axarr[0].imshow(batch1_img)
+    axarr[1].set_title("Date 2")
+    axarr[1].imshow(batch2_img)
+    axarr[2].set_title("Groundtruth")
+    axarr[2].imshow(groundtruth.cpu().numpy())
+    axarr[3].set_title("Prediction")
+    axarr[3].imshow(prediction.cpu().numpy())
+    plt.setp(axarr, xticks=[], yticks=[])
+
+    comet.log_figure(figure=fig, figure_name=fig_name)
 
 
 
