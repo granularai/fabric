@@ -23,6 +23,8 @@ from torch.autograd import Variable
 
 from torchvision import transforms
 from torchvision.transforms import functional
+from functools import partial
+
 
 band_ids = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']
 
@@ -75,14 +77,15 @@ def match_bands(date1, date2):
     pool.close()
     return date2
 
-def _resize(band):
-    band = cv2.resize(band, (10980, 10980))
+def _resize(band, height, width):
+    band = cv2.resize(band, (height, width))
     band = stretch_8bit(band)
     return band
 
-def stack_bands(bands):
+def stack_bands(bands, height=10980, width=10980):
     pool = Pool(26)
-    bands = pool.map(_resize, bands)
+    resize_by_hw = partial(_resize, height=height, width=width)
+    bands = pool.map(resize_by_hw, bands)
     pool.close()
 
     return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)

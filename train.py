@@ -165,6 +165,39 @@ for epoch in range(opt.epochs):
 
         print ("EPOCH VALIDATION METRICS", mean_val_metrics)
 
+
+        #
+        #
+        # code for outputting full city results
+
+        d1_bands = glob.glob(data_dir + 'Safes/' + safe1 + '/GRANULE/**/IMG_DATA/*_B*.jp2')
+        d2_bands = glob.glob(data_dir + 'Safes/' + safe2 + '/GRANULE/**/IMG_DATA/*_B*.jp2')
+
+        template_img = rasterio.open(d1_bands[2])
+        profile = template_img.profile
+
+        d1_bands.sort()
+        d2_bands.sort()
+
+        d1d2 = read_bands(d1_bands + d2_bands)
+        print ('Bands read')
+
+        d1, d2 = stack_bands(d1d2, height=template_img.height, width=template_img.width)
+
+        d1 = d1.transpose(1,2,0)
+        d2 = d2.transpose(1,2,0)
+
+        patches1, hs, ws, lc, lr, h, w = get_patches(d1)
+        patches1 = patches1.transpose(0,3,1,2)
+
+        print ('Patches1 Created')
+
+        patches2, hs, ws, lc, lr, h, w = get_patches(d2)
+        patches2 = patches2.transpose(0,3,1,2)
+
+        print ('Patches2 Created')
+        #
+        #
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
