@@ -5,7 +5,6 @@ def get_parser_with_args():
     parser.add_argument('--patch_size', type=int, default=120, required=False, help='input patch size')
     parser.add_argument('--stride', type=int, default=10, required=False, help='stride at which to sample patches')
     parser.add_argument('--aug', default=True, required=False, help='Do augmentation or not')
-    parser.add_argument('--mask', default=True, required=False, help='Load LULC mask and train with it')
 
     parser.add_argument('--gpu_ids', default='0,1,2,3', required=False, help='gpus ids for parallel training')
     parser.add_argument('--num_workers', type=int, default=90, required=False, help='Number of cpu workers')
@@ -27,5 +26,6 @@ def get_parser_with_args():
     parser.add_argument('--data_dir', default='../datasets/onera/', required=False, help='data directory for training')
     parser.add_argument('--weight_dir', default='../weights/', required=False, help='directory to save weights')
     parser.add_argument('--log_dir', default='../logs/', required=False, help='directory to save training log')
+    parser.add_argument('--validation_city', default='/chongqing', required=False, help='city to output complete results')
 
     return parser

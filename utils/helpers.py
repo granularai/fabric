@@ -30,11 +30,6 @@ def initialize_metrics():
         'cd_precisions': [],
         'cd_recalls': [],
         'cd_f1scores': [],
-        'lulc_losses': [],
-        'lulc_corrects': [],
-        'lulc_precisions': [],
-        'lulc_recalls': [],
-        'lulc_f1scores': []
     }
 
     return metrics
@@ -42,21 +37,16 @@ def initialize_metrics():
 def get_mean_metrics(metric_dict):
     return {k:np.mean(v) for k,v in metric_dict.items()}
 
-def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report, lulc_loss, lulc_corrects, lulc_report):
+def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report):
     metric_dict['cd_losses'].append(cd_loss.item())
     metric_dict['cd_corrects'].append(cd_corrects.item())
     metric_dict['cd_precisions'].append(cd_report[0])
     metric_dict['cd_recalls'].append(cd_report[1])
     metric_dict['cd_f1scores'].append(cd_report[2])
-    metric_dict['lulc_losses'].append(lulc_loss.item())
-    metric_dict['lulc_corrects'].append(lulc_corrects.item())
-    metric_dict['lulc_precisions'].append(lulc_report[0])
-    metric_dict['lulc_recalls'].append(lulc_report[1])
-    metric_dict['lulc_f1scores'].append(lulc_report[2])
 
     return metric_dict
 
-def log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lulc_preds):
+def log_images(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
     batch_size = batch_img1.shape[0]
     samples = list(range(0,batch_size,10))
     for sample in samples:
@@ -66,10 +56,6 @@ def log_images(comet, epoch, batch_img1, batch_img2, labels, masks, cd_preds, lu
         #log cd
         cd_figname='epoch_'+str(epoch)+'_change_detection_sample_'+str(sample)
         _log_figure(comet, sample_img1, sample_img2, labels[sample], cd_preds[sample], fig_name=cd_figname)
-
-        #log lulc
-        lulc_figname='epoch_'+str(epoch)+'_landuse_landcover_sample_'+str(sample)
-        _log_figure(comet, sample_img1, sample_img2, masks[sample], lulc_preds[sample], fig_name=lulc_figname)
 
 def _denorm_image(image_tensor, sample):
     np_arr = torch.flip(image_tensor[sample][1:4,:,:],[0]).permute(1,2,0).cpu().numpy()
@@ -116,10 +102,10 @@ def get_loaders(opt):
 
     logging.info('STARTING Dataset Creation')
 
-    full_load = full_onera_loader(opt.data_dir, load_mask=opt.mask)
+    full_load = full_onera_loader(opt.data_dir)
 
-    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug, opt.mask)
-    val_dataset = OneraPreloader(opt.data_dir, val_samples, full_load, opt.patch_size, False, opt.mask)
+    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug)
+    val_dataset = OneraPreloader(opt.data_dir, val_samples, full_load, opt.patch_size, False)
 
     logging.info('STARTING Dataloading')
 
@@ -172,10 +158,8 @@ def define_output_paths(opt):
         output path
 
     """
-    if opt.mask:
-        model_name = 'lulc_cd'
-    else:
-        model_name = 'cd'
+
+    model_name = 'cd'
 
     if opt.loss == 'bce' or opt.loss == 'dice' or opt.loss == 'jaccard':
         path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
@@ -244,12 +228,9 @@ def load_model(opt, device):
         DataParallel model
 
     """
-    if opt.mask:
-        model = BiDateLULCNet(13, 2, 5).to(device)
-        model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
-    else:
-        model = BiDateNet(13, 2).to(device)
-        model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
+
+    model = BiDateNet(13, 2).to(device)
+    model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
 
     return model
 

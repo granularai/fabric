@@ -38,7 +38,7 @@ class FocalLoss(nn.Module):
         loss = -1 * (1-pt)**self.gamma * logpt
         if self.size_average: return loss.mean()
         else: return loss.sum()
-        
+
 
 def dice_loss(logits, true, eps=1e-7):
     """Computes the Sørensen–Dice loss.
@@ -151,7 +151,7 @@ class TverskyLoss(nn.Module):
             true_1_hot = torch.eye(num_classes)[true.squeeze(1)]
             true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
             probas = F.softmax(logits, dim=1)
-        
+
         true_1_hot = true_1_hot.type(logits.type())
         dims = (0,) + tuple(range(2, true.ndimension()))
         intersection = torch.sum(probas * true_1_hot, dims)
