@@ -32,8 +32,8 @@ pairs = []
 for row in r:
     pairs.append(row)
 
-fin.close()    
-    
+fin.close()
+
 model = UNetClassify(layers=6, init_filters=32, num_channels=13, fusion_method='mul', out_dim=1).cuda()
 weights = torch.load(weight_file, map_location=lambda storage, loc: storage.cuda(0))
 model.load_state_dict(weights)
@@ -46,7 +46,7 @@ for pair in pairs:
     date2 = pair[2]
     safe1 = pair[3]
     safe2 = pair[4]
-    
+
     if not os.path.exists(results_dir + tid + '_' + date1 + '_' + date2 + '.tif'):
         d1_bands = glob.glob(data_dir + 'Safes/' + safe1 + '/GRANULE/**/IMG_DATA/*_B*.jp2')
         d2_bands = glob.glob(data_dir + 'Safes/' + safe2 + '/GRANULE/**/IMG_DATA/*_B*.jp2')
@@ -103,10 +103,5 @@ for pair in pairs:
         fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
         fout.write(np.asarray([mask]).astype(np.uint8))
         fout.close()
-        
+
 #         break
-
-
-    
-    
-    

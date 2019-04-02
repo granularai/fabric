@@ -79,7 +79,7 @@ optimizer = optim.Adam(model.parameters(), lr=opt.lr, weight_decay=1e-2)
 ### Set starting values
 ###
 
-best_metrics = {'cd_f1scores':-1}
+best_metrics = {'cd_f1scores':-1, 'cd_recalls':-1, 'cd_precisions':-1}
 
 
 
@@ -165,7 +165,7 @@ for epoch in range(opt.epochs):
 
         print ("EPOCH VALIDATION METRICS", mean_val_metrics)
 
-    if mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']:
+    if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         best_metrics = mean_val_metrics
