@@ -90,17 +90,17 @@ def stack_bands(bands, height=10980, width=10980):
 
     return np.stack(bands[:13]).astype(np.float32), np.stack(bands[13:]).astype(np.float32)
 
-def get_patches(bands):
-    patches = image.extract_patches(bands, (64, 64, 13), 64)
+def get_patches(bands, patch_dim=64):
+    patches = image.extract_patches(bands, (patch_dim, patch_dim, 13), patch_dim)
     hs, ws = patches.shape[0], patches.shape[1]
-    patches = patches.reshape(-1, 64, 64, 13)
+    patches = patches.reshape(-1, patch_dim, patch_dim, 13)
 
-    last_row = bands[bands.shape[0]-64:,:,:]
-    last_column = bands[:,bands.shape[1]-64:,:]
-    corner = np.asarray([bands[bands.shape[0]-64:,bands.shape[1]-64:,:]])
+    last_row = bands[bands.shape[0]-patch_dim:,:,:]
+    last_column = bands[:,bands.shape[1]-patch_dim:,:]
+    corner = np.asarray([bands[bands.shape[0]-patch_dim:,bands.shape[1]-patch_dim:,:]])
 
-    last_column = image.extract_patches(last_column, (64,64,13), 64).reshape(-1, 64, 64, 13)
-    last_row = image.extract_patches(last_row, (64,64,13), 64).reshape(-1, 64, 64, 13)
+    last_column = image.extract_patches(last_column, (patch_dim,patch_dim,13), patch_dim).reshape(-1, patch_dim, patch_dim, 13)
+    last_row = image.extract_patches(last_row, (patch_dim,patch_dim,13), patch_dim).reshape(-1, patch_dim, patch_dim, 13)
 
     lc = last_column.shape[0]
     lr = last_row.shape[0]

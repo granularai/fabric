@@ -187,17 +187,35 @@ for epoch in range(opt.epochs):
         d1 = d1.transpose(1,2,0)
         d2 = d2.transpose(1,2,0)
 
-        patches1, hs, ws, lc, lr, h, w = get_patches(d1)
+        patches1, hs, ws, lc, lr, h, w = get_patches(d1, patch_dim=opt.patch_size)
         patches1 = patches1.transpose(0,3,1,2)
 
         print ('Patches1 Created')
 
-        patches2, hs, ws, lc, lr, h, w = get_patches(d2)
+        patches2, hs, ws, lc, lr, h, w = get_patches(d2, patch_dim=opt.patch_size)
         patches2 = patches2.transpose(0,3,1,2)
 
         print ('Patches2 Created')
-        #
-        #
+
+        out = []
+        for i in range(0,patches1.shape[0],batch_size):
+            batch1 = torch.from_numpy(patches1[i:i+batch_size,:,:,:]).to(device)
+            batch2 = torch.from_numpy(patches2[i:i+batch_size,:,:,:]).to(device)
+
+            preds = model(batch1, batch2)
+            del batch1
+            del batch2
+
+            preds = F.sigmoid(preds) > 0.5
+            preds = preds.data.cpu().numpy()
+            out.append(preds)
+
+        profile['dtype'] = 'uint8'
+        profile['driver'] = 'GTiff'
+        fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
+        fout.write(np.asarray([mask]).astype(np.uint8))
+        fout.close()
+
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
