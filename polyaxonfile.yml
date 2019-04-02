@@ -6,19 +6,47 @@ kind: group
 build:
   dockerfile: Dockerfile
 
+#
+# hptuning:
+#   random_search:
+#     n_experiments: 1
+#   concurrency: 3
+#   seed: 3234
+#   matrix:
+#     lr:
+#       uniform: 0.002
+#     alpha:
+#       uniform: 0.3
+#     beta:
+#       uniform: 0.7
 
 hptuning:
-  random_search:
-    n_experiments: 10
-  concurrency: 3
+  concurrency: 4
   seed: 3234
+  bo:
+    n_iterations: 16
+    n_initial_trials: 8
+    metric:
+      name: validate_cd_f1scores
+      optimization: maximize
+    utility_function:
+      acquisition_function: ucb
+      kappa: 1.2
+      gaussian_process:
+        kernel: matern
+        length_scale: 1.0
+        nu: 1.9
+        n_restarts_optimizer: 0
+
   matrix:
     lr:
-      logspace: 0.01:0.1:5
+      uniform: [0.001, 0.01]
     alpha:
-      logspace: 0.1:0.9:5
+      uniform: [0, 0.3]
     beta:
-      logspace: 0.1:0.9:5
+      uniform: [0.7, 1]
+
+
 
 declarations:
   dataset: onera_w_mask.tar.gz
@@ -29,7 +57,12 @@ declarations:
   loss: tversky
   stride: 50
   patch_size: 90
-  epochs: 10
+  epochs: 50
+  # lr: 0.01
+  # alpha: 0.1
+  # beta: 0.9
+
+
 
 
 run:

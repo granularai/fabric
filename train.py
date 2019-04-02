@@ -31,7 +31,7 @@ import logging
 ### Initialize experiments for polyaxon and comet.ml
 ###
 
-comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc_hptuning", auto_param_logging=False, parse_args=False)
+comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="cd_lulc_hptuning_adam", auto_param_logging=False, parse_args=False)
 comet.log_other('status', 'started')
 experiment = Experiment()
 logging.basicConfig(level=logging.INFO)
@@ -68,7 +68,9 @@ model = load_model(opt, device)
 
 criterion = get_criterion(opt)
 criterion_lulc = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=opt.lr)
+# optimizer = optim.SGD(model.parameters(), lr=opt.lr)
+optimizer = optim.Adam(model.parameters(), lr=opt.lr, weight_decay=1e-2)
+
 
 
 
@@ -106,7 +108,7 @@ for epoch in range(opt.epochs):
             cd_loss = criterion(cd_preds, labels)
             lulc_loss = criterion_lulc(lulc_preds, masks)
 
-            loss = cd_loss + lulc_loss
+            loss = cd_loss + lulc_loss*0
             loss.backward()
             optimizer.step()
 
@@ -169,7 +171,7 @@ for epoch in range(opt.epochs):
         best_metrics = mean_val_metrics
 
     log_train_metrics = {"train_"+k:v for k,v in mean_train_metrics.items()}
-    log_val_metrics = {"train_"+k:v for k,v in mean_val_metrics.items()}
+    log_val_metrics = {"validate_"+k:v for k,v in mean_val_metrics.items()}
     epoch_metrics = {'epoch':epoch,
                         **log_train_metrics, **log_val_metrics}
 
