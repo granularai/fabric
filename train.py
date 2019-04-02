@@ -169,15 +169,16 @@ for epoch in range(opt.epochs):
         #
         #
         # code for outputting full city results
+        val_city = '/chongqing'
+        d1_bands = glob.glob(opt.data_dir + 'images' + val_city + '/imgs_1/*')
+        d2_bands = glob.glob(opt.data_dir + 'images' + val_city + '/imgs_2/*')
 
-        d1_bands = glob.glob(data_dir + 'Safes/' + safe1 + '/GRANULE/**/IMG_DATA/*_B*.jp2')
-        d2_bands = glob.glob(data_dir + 'Safes/' + safe2 + '/GRANULE/**/IMG_DATA/*_B*.jp2')
+        d1_bands.sort()
+        d2_bands.sort()
 
         template_img = rasterio.open(d1_bands[2])
         profile = template_img.profile
 
-        d1_bands.sort()
-        d2_bands.sort()
 
         d1d2 = read_bands(d1_bands + d2_bands)
         print ('Bands read')
@@ -210,11 +211,17 @@ for epoch in range(opt.epochs):
             preds = preds.data.cpu().numpy()
             out.append(preds)
 
+        out = np.vstack(out)
+        mask = get_bands(out, hs, ws, lc, lr, h, w, patch_size=90)
+
         profile['dtype'] = 'uint8'
         profile['driver'] = 'GTiff'
-        fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
+        # fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
+        file_path = val_city+'_epoch_'+str(epoch)+'.tif'
+        fout = rasterio.open(file_path, 'w', **profile)
         fout.write(np.asarray([mask]).astype(np.uint8))
         fout.close()
+        comet.log_image(file_path)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')

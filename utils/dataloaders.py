@@ -109,7 +109,7 @@ def get_patches(bands, patch_dim=64):
 
     return patches, hs, ws, lc, lr, bands.shape[0], bands.shape[1]
 
-def get_bands(patches, hs, ws, lc, lr, h, w):
+def get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
     corner = patches[-1]
     last_row = patches[-lr-1:-1]
     last_column = patches[-lc-lr-1:-lr-1]
@@ -119,16 +119,16 @@ def get_bands(patches, hs, ws, lc, lr, h, w):
     k = 0
     for i in range(hs):
         for j in range(ws):
-            img[i*64:i*64+64,j*64:j*64+64] = patches[k]
+            img[i*patch_size:i*patch_size+patch_size,j*patch_size:j*patch_size+patch_size] = patches[k]
             k += 1
 
     for i in range(lc):
-        img[i*64:i*64+64,w-64:] = last_column[i]
+        img[i*patch_size:i*patch_size+patch_size,w-patch_size:] = last_column[i]
 
     for i in range(lr):
-        img[h-64:,i*64:i*64+64] = last_row[i]
+        img[h-patch_size:,i*patch_size:i*patch_size+patch_size] = last_row[i]
 
-    img[h-64:,w-64:] = corner
+    img[h-patch_size:,w-patch_size:] = corner
 
     return img
 
