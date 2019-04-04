@@ -199,8 +199,8 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
     val_metadata = []
     for city_no in val_cities:
         city_label = cv2.imread(data_dir + 'labels/' + cities[city_no] + '/cm/cm.png', 0) / 255
-        for i in range(0, city_label.shape[0], patch_size):
-            for j in range(0, city_label.shape[1], patch_size):
+        for i in range(0, city_label.shape[0], stride):
+            for j in range(0, city_label.shape[1], stride):
                 if (i + patch_size) <= city_label.shape[0] and (j + patch_size) <= city_label.shape[1]:
                     val_metadata.append([cities[city_no], i, j])
 

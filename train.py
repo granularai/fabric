@@ -94,7 +94,7 @@ for epoch in range(opt.epochs):
         logging.info('SET model mode to train!')
         batch_iter = 0
         for batch_img1, batch_img2, labels in train_loader:
-            logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
+            # logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img1 = autograd.Variable(batch_img1).to(device)
             batch_img2 = autograd.Variable(batch_img2).to(device)
@@ -205,13 +205,14 @@ for epoch in range(opt.epochs):
         out = np.vstack(out[0])
         mask = get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
 
-        profile['dtype'] = 'uint8'
-        profile['driver'] = 'GTiff'
+        # profile['dtype'] = 'uint8'
+        # profile['driver'] = 'GTiff'
         # fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
-        file_path = opt.validation_city+'_epoch_'+str(epoch)+'.tif'
-        fout = rasterio.open(file_path, 'w', **profile)
-        fout.write(np.asarray([mask]).astype(np.uint8))
-        fout.close()
+        file_path = opt.validation_city+'_epoch_'+str(epoch)+'.png'
+        # fout = rasterio.open(file_path, 'w', **profile)
+        # fout.write(np.asarray([mask]).astype(np.uint8))
+        # fout.close()
+        cv2.imwrite(file_path, mask * 255)
         comet.log_image(file_path)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
