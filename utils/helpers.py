@@ -55,7 +55,7 @@ def log_images(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
 
         #log cd
         cd_figname='epoch_'+str(epoch)+'_change_detection_sample_'+str(sample)
-        _log_figure(comet, sample_img1, sample_img2, labels[sample], cd_preds[sample], fig_name=cd_figname)
+        log_figure(comet, sample_img1, sample_img2, labels[sample], cd_preds[sample], fig_name=cd_figname)
 
 def _denorm_image(image_tensor, sample):
     np_arr = torch.flip(image_tensor[sample][1:4,:,:],[0]).permute(1,2,0).cpu().numpy()
@@ -66,15 +66,17 @@ def _scale(x, out_range=(0, 255)):
     y = (x - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
     return y * (out_range[1] - out_range[0]) + (out_range[1] + out_range[0]) / 2
 
-def _log_figure(comet, batch1_img, batch2_img, groundtruth, prediction, fig_name=''):
+def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
     fig, axarr = plt.subplots(1,4)
     axarr[0].set_title("Date 1")
-    axarr[0].imshow(batch1_img)
+    axarr[0].imshow(img1)
     axarr[1].set_title("Date 2")
-    axarr[1].imshow(batch2_img)
+    axarr[1].imshow(img2)
     axarr[2].set_title("Groundtruth")
     axarr[2].imshow(groundtruth.cpu().numpy())
+    print("groundtruth shape",groundtruth.cpu().numpy().shape)
     axarr[3].set_title("Prediction")
+    print("prediction shape",prediction.cpu().numpy().shape)
     axarr[3].imshow(prediction.cpu().numpy())
     plt.setp(axarr, xticks=[], yticks=[])
 

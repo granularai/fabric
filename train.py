@@ -19,7 +19,7 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 from utils.parser import get_parser_with_args
-from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_images
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_images, log_figure, _scale
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -31,7 +31,7 @@ import logging
 ### Initialize experiments for polyaxon and comet.ml
 ###
 
-comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="testing_val_image", auto_param_logging=False, parse_args=False)
+comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="val_image_2", auto_param_logging=False, parse_args=False)
 comet.log_other('status', 'started')
 experiment = Experiment()
 logging.basicConfig(level=logging.INFO)
@@ -121,7 +121,7 @@ for epoch in range(opt.epochs):
             comet.log_metrics(mean_train_metrics)
 
             del batch_img1, batch_img2, labels
-
+            # break # temporary break to ignore training
 
         print("EPOCH TRAIN METRICS", mean_train_metrics)
 
@@ -158,29 +158,45 @@ for epoch in range(opt.epochs):
         print ("EPOCH VALIDATION METRICS", mean_val_metrics)
 
 
-        #
-        #
-        # code for outputting full city results
+
+        ###
+        ### Output full test image
+        ###
+
+        # load day 1 and 2 bands
         d1_bands = glob.glob(opt.data_dir + 'images' + opt.validation_city + '/imgs_1/*')
         d2_bands = glob.glob(opt.data_dir + 'images' + opt.validation_city + '/imgs_2/*')
 
+        # sort bands to ensure that B01 -> B12 order
         d1_bands.sort()
         d2_bands.sort()
 
+        # load band 2 from d1 bands to get template image dimensions, profile
         template_img = rasterio.open(d1_bands[2])
         profile = template_img.profile
 
-
+        # read all the bands from d1 and d2 by simply rio opening the files
         d1d2 = read_bands(d1_bands + d2_bands)
         print ('Bands read')
 
-        d1, d2 = stack_bands(d1d2, height=template_img.height, width=template_img.width)
+        # using city_loader, lets get a stack of all bands of dimension (2,13,H,W)
+        imgs_stacked = city_loader([opt.data_dir + 'images' + opt.validation_city, template_img.height, template_img.width])
+        print("imgs_stacked", imgs_stacked.shape)
 
+        d1 = imgs_stacked[0]
+        d2 = imgs_stacked[1]
+        print("d1 and d2 shape", d1.shape, d2.shape)
+
+        # flip images
         d1 = d1.transpose(1,2,0)
         d2 = d2.transpose(1,2,0)
+        print("transposed d1 and d2 shape", d1.shape, d2.shape)
 
         patches1, hs, ws, lc, lr, h, w = get_patches(d1, patch_dim=opt.patch_size)
+        print("patches shape and meta values", patches1.shape, hs, ws, lc, lr, h, w)
+
         patches1 = patches1.transpose(0,3,1,2)
+        print("transposed patches shape and meta values", patches1.shape)
 
         print ('Patches1 Created')
 
@@ -195,28 +211,37 @@ for epoch in range(opt.epochs):
             batch2 = torch.from_numpy(patches2[i:i+opt.batch_size,:,:,:]).to(device)
 
             preds = model(batch1, batch2)
+
             del batch1
             del batch2
 
-            preds = F.sigmoid(preds) > 0.5
-            preds = preds.data.cpu().numpy()
-            out.append(preds)
+            # preds = F.sigmoid(preds) > 0.5
+            _, cd_preds = torch.max(preds, 1)
+            print(cd_preds.shape)
+            cd_preds = cd_preds.data.cpu().numpy()
+            out.append(cd_preds)
 
-        out = np.vstack(out[0])
-        mask = get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
+        print("len of output", len(out))
+        print("shape of output[0]", out[0].shape)
+        mask = get_bands(out[0], hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
 
-        profile['dtype'] = 'uint8'
-        profile['driver'] = 'GTiff'
-        # fout = rasterio.open(results_dir + tid + '_' + date1 + '_' + date2 + '.tif', 'w', **profile)
-        file_path = opt.validation_city+'_epoch_'+str(epoch)+'.tif'
-        fout = rasterio.open(file_path, 'w', **profile)
-        fout.write(np.asarray([mask]).astype(np.uint8))
-        fout.close()
-        comet.log_image(file_path)
+        torch_mask = torch.from_numpy(mask).float().permute(1,0).to(device)
+
+        print("MASK DIMS", mask.shape)
+
+        file_path = opt.validation_city+'_epoch_'+str(epoch)
+        cv2.imwrite(file_path+'.png', _scale(mask))
+        comet.log_image(file_path+'.png')
+
+        preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images' + opt.validation_city + '/pair/img1.png', 1))
+        preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images' + opt.validation_city + '/pair/img2.png', 1))
+        groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels' + opt.validation_city + '/cm/cm.png', 0))
+        log_figure(comet, img1=preview1, img2=preview2, groundtruth=groundtruth, prediction=torch_mask, fig_name=file_path)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         experiment.outputs_store.upload_file('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
+        comet.log_asset('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         best_metrics = mean_val_metrics
 
     log_train_metrics = {"train_"+k:v for k,v in mean_train_metrics.items()}

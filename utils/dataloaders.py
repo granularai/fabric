@@ -132,6 +132,29 @@ def get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
 
     return img
 
+# def get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
+#     corner = patches[-1]
+#     last_row = patches[-lr-1:-1]
+#     last_column = patches[-lc-lr-1:-lr-1]
+#     patches = patches[:-lc-lr-1]
+#
+#     img = np.zeros((h,w,13))
+#     k = 0
+#     for i in range(hs):
+#         for j in range(ws):
+#             img[i*patch_size:i*patch_size+patch_size,j*patch_size:j*patch_size+patch_size,:] = patches[k]
+#             k += 1
+#
+#     for i in range(lc):
+#         img[i*patch_size:i*patch_size+patch_size,w-patch_size:,:] = last_column[i]
+#
+#     for i in range(lr):
+#         img[h-patch_size:,i*patch_size:i*patch_size+patch_size,:] = last_row[i]
+#
+#     img[h-patch_size:,w-patch_size:,:] = corner
+#
+#     return img.astype(np.uint8)
+
 def match_band(source, template):
     oldshape = source.shape
     source = source.ravel()
