@@ -80,7 +80,7 @@ def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
 
     comet.log_figure(figure=fig, figure_name=fig_name)
 
-
+    plt.close(fig=fig)
 
 def get_loaders(opt):
     """Given user arguments, loads dataset metadata, loads full onera dataset, defines a preloader and returns train and val dataloaders
