@@ -19,7 +19,7 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 from utils.parser import get_parser_with_args
-from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_images
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_patches
 from utils.inference import generate_patches, log_full_image
 
 
@@ -96,7 +96,6 @@ for epoch in range(opt.epochs):
         logging.info('SET model mode to train!')
         batch_iter = 0
         for batch_img1, batch_img2, labels in train_loader:
-            break
             logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img1 = autograd.Variable(batch_img1).to(device)
@@ -125,7 +124,7 @@ for epoch in range(opt.epochs):
 
             del batch_img1, batch_img2, labels
 
-        # print("EPOCH TRAIN METRICS", mean_train_metrics)
+        print("EPOCH TRAIN METRICS", mean_train_metrics)
 
     with comet.validate():
         model.eval()
@@ -144,7 +143,7 @@ for epoch in range(opt.epochs):
             _, cd_preds = torch.max(cd_preds, 1)
 
             if first_batch:
-                log_images(comet, epoch, batch_img1, batch_img2, labels, cd_preds)
+                log_patches(comet, epoch, batch_img1, batch_img2, labels, cd_preds)
                 first_batch=False
 
             cd_corrects = 100 * (cd_preds.byte() == labels.squeeze().byte()).sum() / (labels.size()[0] * opt.patch_size * opt.patch_size)

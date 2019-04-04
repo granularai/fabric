@@ -28,7 +28,7 @@ from functools import partial
 import matplotlib.pyplot as plt
 
 sys.path.append('..')
-from utils.dataloaders import city_loader, read_bands
+from utils.dataloaders import city_loader, read_bands, stretch_8bit
 from utils.helpers import log_figure, scale
 
 
@@ -148,10 +148,8 @@ def _get_patches(bands, patch_dim=64):
 
     """
     patches = image.extract_patches(bands, (patch_dim, patch_dim, 13), patch_dim)
-    print("shape of patches before squashing non patch dimensions", patches.shape)
     hs, ws = patches.shape[0], patches.shape[1]
     patches = patches.reshape(-1, patch_dim, patch_dim, 13)
-    print("shape of patches after squashing non patch dimensions", patches.shape)
 
     last_row = bands[bands.shape[0]-patch_dim:,:,:]
     last_column = bands[:,bands.shape[1]-patch_dim:,:]
