@@ -28,25 +28,21 @@ from polystores.stores.manager import StoreManager
 
 import logging
 
-
-###
-### Initialize experiments for polyaxon and comet.ml
-###
-
-comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name="val_image_2", auto_param_logging=False, parse_args=False)
-comet.log_other('status', 'started')
-experiment = Experiment()
-logging.basicConfig(level=logging.INFO)
-
-
-
-
 ###
 ### Initialize Parser and define arguments
 ###
 
 parser = get_parser_with_args()
 opt = parser.parse_args()
+
+###
+### Initialize experiments for polyaxon and comet.ml
+###
+
+comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN', project_name=opt.project_name, auto_param_logging=False, parse_args=False)
+comet.log_other('status', 'started')
+experiment = Experiment()
+logging.basicConfig(level=logging.INFO)
 comet.log_parameters(vars(opt))
 
 ###
@@ -81,8 +77,6 @@ optimizer = optim.SGD(model.parameters(), lr=opt.lr)
 ###
 
 best_metrics = {'cd_f1scores':-1, 'cd_recalls':-1, 'cd_precisions':-1}
-
-
 
 ###
 ### Begin Training
@@ -173,8 +167,7 @@ for epoch in range(opt.epochs):
 
             preds = model(batch1, batch2)
 
-            del batch1
-            del batch2
+            del batch1, batch2
 
             _, cd_preds = torch.max(preds, 1)
 

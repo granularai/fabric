@@ -2,6 +2,9 @@ import argparse
 
 def get_parser_with_args():
     parser = argparse.ArgumentParser(description='Training change detection network')
+
+    parser.add_argument('--project_name',type=str, required=True, help='Name of the project for logging')
+
     parser.add_argument('--patch_size', type=int, default=120, required=False, help='input patch size')
     parser.add_argument('--stride', type=int, default=10, required=False, help='stride at which to sample patches')
     parser.add_argument('--aug', default=True, required=False, help='Do augmentation or not')
