@@ -96,6 +96,7 @@ for epoch in range(opt.epochs):
         logging.info('SET model mode to train!')
         batch_iter = 0
         for batch_img1, batch_img2, labels in train_loader:
+            break
             logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img1 = autograd.Variable(batch_img1).to(device)
@@ -124,7 +125,7 @@ for epoch in range(opt.epochs):
 
             del batch_img1, batch_img2, labels
 
-        print("EPOCH TRAIN METRICS", mean_train_metrics)
+        # print("EPOCH TRAIN METRICS", mean_train_metrics)
 
     with comet.validate():
         model.eval()
@@ -181,7 +182,7 @@ for epoch in range(opt.epochs):
             cd_preds = cd_preds.data.cpu().numpy()
             out.append(cd_preds)
 
-        log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, comet)
+        log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, device, comet)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')

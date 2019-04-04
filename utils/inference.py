@@ -28,11 +28,25 @@ from functools import partial
 import matplotlib.pyplot as plt
 
 sys.path.append('..')
-from utils.dataloaders import city_loader
+from utils.dataloaders import city_loader, read_bands
 from utils.helpers import log_figure, scale
 
 
 def generate_patches(opt):
+    """Generates patches for 2 dates based on user defined options for inference.
+        NOTE: expects 2 images of same shape, depth=13 under imgs_1, imgs_2 in city name folder
+
+    Parameters
+    ----------
+    opt : dict
+        Dictionary of options/flags
+
+    Returns
+    -------
+    tuple(patches1, patches2, hs, ws, lc, lr, h, w)
+        2 image patch stacks and metadata for reconstruction
+
+    """
     # load day 1 and 2 bands
     d1_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_1/*')
     d2_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_2/*')
@@ -72,10 +86,36 @@ def generate_patches(opt):
     return patches1, patches2, hs, ws, lc, lr, h, w
 
 
-def log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, comet):
+def log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, device, comet):
+    """Given a list of patch arrays, constructs an inference output and logs to comet
+
+    Parameters
+    ----------
+    out : list
+        list of np.arrays
+    hs : int
+        height count
+    ws : int
+        row count
+    lc : int
+        last column
+    lr : int
+        last row
+    h : int
+        height of original image
+    w : int
+        width of original image
+    opt : dict
+        Dictionary of options/flags
+    epoch : int
+        current epoch
+    comet : comet_ml.Experiment
+        instance of comet.ml logger
+
+    """
     out = np.vstack(out)
 
-    mask = get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
+    mask = _get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
 
     torch_mask = torch.from_numpy(mask).float().to(device)
 
@@ -91,6 +131,22 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, comet):
 
 
 def _get_patches(bands, patch_dim=64):
+    """given a 13 band image, get a stack of patches with metadata for reconstruction
+    (last row/column position, corner position, original image size)
+
+    Parameters
+    ----------
+    bands : np.array
+        image array with depth 13
+    patch_dim : int
+        height and width of patches for model
+
+    Returns
+    -------
+    tuple
+        patches with metadata for reconstruction
+
+    """
     patches = image.extract_patches(bands, (patch_dim, patch_dim, 13), patch_dim)
     print("shape of patches before squashing non patch dimensions", patches.shape)
     hs, ws = patches.shape[0], patches.shape[1]
@@ -111,6 +167,33 @@ def _get_patches(bands, patch_dim=64):
     return patches, hs, ws, lc, lr, bands.shape[0], bands.shape[1]
 
 def _get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
+    """This method allows us to reconstruct an image from a stack of patches and return a composite numpy array
+
+    Parameters
+    ----------
+    patches : np.array
+        a stack of patches including last row, last column and corner patch
+    hs : int
+        height count
+    ws : int
+        row count
+    lc : int
+        last column
+    lr : int
+        last row
+    h : int
+        height of original image
+    w : int
+        width of original image
+    patch_size : int
+        user input for patch size
+
+    Returns
+    -------
+    np.array
+        2d image array (h,w)
+
+    """
     corner = patches[-1]
     last_row = patches[-lr-1:-1]
     last_column = patches[-lc-lr-1:-lr-1]
