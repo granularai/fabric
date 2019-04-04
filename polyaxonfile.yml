@@ -16,7 +16,7 @@ declarations:
   loss: tversky
   validation_city: cupertino
   stride: 10
-  patch_size: 32
+  patch_size: 90
   epochs: 1
   lr: 0.001
   alpha: 0.1

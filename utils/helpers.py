@@ -22,7 +22,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-
 def initialize_metrics():
     metrics={
         'cd_losses': [],
@@ -59,9 +58,9 @@ def log_images(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
 
 def _denorm_image(image_tensor, sample):
     np_arr = torch.flip(image_tensor[sample][1:4,:,:],[0]).permute(1,2,0).cpu().numpy()
-    return _scale(np_arr).astype(int)
+    return scale(np_arr).astype(int)
 
-def _scale(x, out_range=(0, 255)):
+def scale(x, out_range=(0, 255)):
     domain = np.min(x), np.max(x)
     y = (x - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
     return y * (out_range[1] - out_range[0]) + (out_range[1] + out_range[0]) / 2

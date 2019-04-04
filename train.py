@@ -19,7 +19,9 @@ from utils.dataloaders import *
 from models.bidate_model import *
 from utils.metrics import *
 from utils.parser import get_parser_with_args
-from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_images, log_figure, _scale
+from utils.helpers import get_loaders, define_output_paths, download_dataset, get_criterion, load_model, initialize_metrics, get_mean_metrics, set_metrics, log_images
+from utils.inference import generate_patches, log_full_image
+
 
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
 from polystores.stores.manager import StoreManager
@@ -121,7 +123,6 @@ for epoch in range(opt.epochs):
             comet.log_metrics(mean_train_metrics)
 
             del batch_img1, batch_img2, labels
-            break # temporary break to ignore training
 
         print("EPOCH TRAIN METRICS", mean_train_metrics)
 
@@ -162,46 +163,8 @@ for epoch in range(opt.epochs):
         ###
         ### Output full test image
         ###
-
-        # load day 1 and 2 bands
-        d1_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_1/*')
-        d2_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_2/*')
-
-        # sort bands to ensure that B01 -> B12 order
-        d1_bands.sort()
-        d2_bands.sort()
-
-        # load band 2 from d1 bands to get template image dimensions, profile
-        template_img = rasterio.open(d1_bands[2])
-        profile = template_img.profile
-
-        # read all the bands from d1 and d2 by simply rio opening the files
-        d1d2 = read_bands(d1_bands + d2_bands)
-        print ('Bands read')
-
-        # using city_loader, lets get a stack of all bands of dimension (2,13,H,W)
-        print("template values h,w", template_img.height, template_img.width)
-
-        # TEMPORARY FIX: switching width and height seems to fix image generation...
-        imgs_stacked = city_loader([opt.data_dir + 'images/' + opt.validation_city, template_img.width,template_img.height])
-
-        d1 = imgs_stacked[0]
-        d2 = imgs_stacked[1]
-
-        # flip images
-        d1 = d1.transpose(1,2,0)
-        d2 = d2.transpose(1,2,0)
-
-        patches1, hs, ws, lc, lr, h, w = get_patches(d1, patch_dim=opt.patch_size)
-
-        patches1 = patches1.transpose(0,3,1,2)
-
-        print ('Patches1 Created')
-
-        patches2, hs, ws, lc, lr, h, w = get_patches(d2, patch_dim=opt.patch_size)
-        patches2 = patches2.transpose(0,3,1,2)
-
-        print ('Patches2 Created')
+        print ("STARTING FULL VALIDATION IMAGE INFERENCE", mean_val_metrics)
+        patches1, patches2, hs, ws, lc, lr, h, w  = generate_patches(opt)
 
         out = []
         for i in range(0,patches1.shape[0],opt.batch_size):
@@ -213,27 +176,12 @@ for epoch in range(opt.epochs):
             del batch1
             del batch2
 
-            # preds = F.sigmoid(preds) > 0.5
             _, cd_preds = torch.max(preds, 1)
-            print(cd_preds.shape)
+
             cd_preds = cd_preds.data.cpu().numpy()
             out.append(cd_preds)
 
-        out = np.vstack(out)
-        mask = get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
-
-        torch_mask = torch.from_numpy(mask).float().to(device)
-
-        print("MASK DIMS", mask.shape)
-
-        file_path = opt.validation_city+'_epoch_'+str(epoch)
-        cv2.imwrite(file_path+'.png', _scale(mask))
-        comet.log_image(file_path+'.png')
-
-        preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + opt.validation_city + '/pair/img1.png', 1))
-        preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + opt.validation_city + '/pair/img2.png', 1))
-        groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels/' + opt.validation_city + '/cm/cm.png', 0))
-        log_figure(comet, img1=preview1, img2=preview2, groundtruth=groundtruth, prediction=torch_mask, fig_name=file_path)
+        log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, comet)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
