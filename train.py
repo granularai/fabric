@@ -94,7 +94,7 @@ for epoch in range(opt.epochs):
         logging.info('SET model mode to train!')
         batch_iter = 0
         for batch_img1, batch_img2, labels in train_loader:
-            # logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
+            logging.info("batch: "+str(batch_iter)+" - "+str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
             batch_img1 = autograd.Variable(batch_img1).to(device)
             batch_img2 = autograd.Variable(batch_img2).to(device)
@@ -121,7 +121,7 @@ for epoch in range(opt.epochs):
             comet.log_metrics(mean_train_metrics)
 
             del batch_img1, batch_img2, labels
-            # break # temporary break to ignore training
+            break # temporary break to ignore training
 
         print("EPOCH TRAIN METRICS", mean_train_metrics)
 
@@ -181,6 +181,8 @@ for epoch in range(opt.epochs):
 
         # using city_loader, lets get a stack of all bands of dimension (2,13,H,W)
         print("template values h,w", template_img.height, template_img.width)
+
+        # TEMPORARY FIX: switching width and height seems to fix image generation...
         imgs_stacked = city_loader([opt.data_dir + 'images/' + opt.validation_city, template_img.width,template_img.height])
 
         d1 = imgs_stacked[0]
@@ -217,7 +219,8 @@ for epoch in range(opt.epochs):
             cd_preds = cd_preds.data.cpu().numpy()
             out.append(cd_preds)
 
-        mask = get_bands(out[0], hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
+        out = np.vstack(out)
+        mask = get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
 
         torch_mask = torch.from_numpy(mask).float().to(device)
 

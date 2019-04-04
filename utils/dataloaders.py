@@ -92,9 +92,11 @@ def stack_bands(bands, height=10980, width=10980):
 
 def get_patches(bands, patch_dim=64):
     patches = image.extract_patches(bands, (patch_dim, patch_dim, 13), patch_dim)
+    print("shape of patches before squashing non patch dimensions", patches.shape)
     hs, ws = patches.shape[0], patches.shape[1]
     patches = patches.reshape(-1, patch_dim, patch_dim, 13)
-
+    print("shape of patches after squashing non patch dimensions", patches.shape)
+    
     last_row = bands[bands.shape[0]-patch_dim:,:,:]
     last_column = bands[:,bands.shape[1]-patch_dim:,:]
     corner = np.asarray([bands[bands.shape[0]-patch_dim:,bands.shape[1]-patch_dim:,:]])
@@ -118,6 +120,8 @@ def get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
 
     img = np.zeros((h,w))
     k = 0
+    print("hs,ws", hs,ws)
+    print("patches shape",patches.shape)
     for i in range(hs):
         for j in range(ws):
             img[i*patch_size:i*patch_size+patch_size,j*patch_size:j*patch_size+patch_size] = patches[k]
