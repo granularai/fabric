@@ -106,10 +106,11 @@ def get_patches(bands, patch_dim=64):
     lr = last_row.shape[0]
 
     patches = np.vstack((patches, last_column, last_row, corner))
-
+    print("bands shape:::",bands.shape)
     return patches, hs, ws, lc, lr, bands.shape[0], bands.shape[1]
 
 def get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
+    print("get_bands:::",patches.shape, hs, ws, lc, lr, h, w)
     corner = patches[-1]
     last_row = patches[-lr-1:-1]
     last_column = patches[-lc-lr-1:-lr-1]

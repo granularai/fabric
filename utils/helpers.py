@@ -67,17 +67,15 @@ def _scale(x, out_range=(0, 255)):
     return y * (out_range[1] - out_range[0]) + (out_range[1] + out_range[0]) / 2
 
 def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
-    fig, axarr = plt.subplots(1,4)
-    axarr[0].set_title("Date 1")
-    axarr[0].imshow(img1)
-    axarr[1].set_title("Date 2")
-    axarr[1].imshow(img2)
-    axarr[2].set_title("Groundtruth")
-    axarr[2].imshow(groundtruth.cpu().numpy())
-    print("groundtruth shape",groundtruth.cpu().numpy().shape)
-    axarr[3].set_title("Prediction")
-    print("prediction shape",prediction.cpu().numpy().shape)
-    axarr[3].imshow(prediction.cpu().numpy())
+    fig, axarr = plt.subplots(2,2)
+    axarr[0,0].set_title("Date 1")
+    axarr[0,0].imshow(img1)
+    axarr[0,1].set_title("Date 2")
+    axarr[0,1].imshow(img2)
+    axarr[1,0].set_title("Groundtruth")
+    axarr[1,0].imshow(groundtruth.cpu().numpy())
+    axarr[1,1].set_title("Prediction")
+    axarr[1,1].imshow(prediction.cpu().numpy())
     plt.setp(axarr, xticks=[], yticks=[])
 
     comet.log_figure(figure=fig, figure_name=fig_name)

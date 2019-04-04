@@ -164,8 +164,8 @@ for epoch in range(opt.epochs):
         ###
 
         # load day 1 and 2 bands
-        d1_bands = glob.glob(opt.data_dir + 'images' + opt.validation_city + '/imgs_1/*')
-        d2_bands = glob.glob(opt.data_dir + 'images' + opt.validation_city + '/imgs_2/*')
+        d1_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_1/*')
+        d2_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_2/*')
 
         # sort bands to ensure that B01 -> B12 order
         d1_bands.sort()
@@ -180,23 +180,19 @@ for epoch in range(opt.epochs):
         print ('Bands read')
 
         # using city_loader, lets get a stack of all bands of dimension (2,13,H,W)
-        imgs_stacked = city_loader([opt.data_dir + 'images' + opt.validation_city, template_img.height, template_img.width])
-        print("imgs_stacked", imgs_stacked.shape)
+        print("template values h,w", template_img.height, template_img.width)
+        imgs_stacked = city_loader([opt.data_dir + 'images/' + opt.validation_city, template_img.width,template_img.height])
 
         d1 = imgs_stacked[0]
         d2 = imgs_stacked[1]
-        print("d1 and d2 shape", d1.shape, d2.shape)
 
         # flip images
         d1 = d1.transpose(1,2,0)
         d2 = d2.transpose(1,2,0)
-        print("transposed d1 and d2 shape", d1.shape, d2.shape)
 
         patches1, hs, ws, lc, lr, h, w = get_patches(d1, patch_dim=opt.patch_size)
-        print("patches shape and meta values", patches1.shape, hs, ws, lc, lr, h, w)
 
         patches1 = patches1.transpose(0,3,1,2)
-        print("transposed patches shape and meta values", patches1.shape)
 
         print ('Patches1 Created')
 
@@ -221,11 +217,9 @@ for epoch in range(opt.epochs):
             cd_preds = cd_preds.data.cpu().numpy()
             out.append(cd_preds)
 
-        print("len of output", len(out))
-        print("shape of output[0]", out[0].shape)
         mask = get_bands(out[0], hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
 
-        torch_mask = torch.from_numpy(mask).float().permute(1,0).to(device)
+        torch_mask = torch.from_numpy(mask).float().to(device)
 
         print("MASK DIMS", mask.shape)
 
@@ -233,9 +227,9 @@ for epoch in range(opt.epochs):
         cv2.imwrite(file_path+'.png', _scale(mask))
         comet.log_image(file_path+'.png')
 
-        preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images' + opt.validation_city + '/pair/img1.png', 1))
-        preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images' + opt.validation_city + '/pair/img2.png', 1))
-        groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels' + opt.validation_city + '/cm/cm.png', 0))
+        preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + opt.validation_city + '/pair/img1.png', 1))
+        preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + opt.validation_city + '/pair/img2.png', 1))
+        groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels/' + opt.validation_city + '/cm/cm.png', 0))
         log_figure(comet, img1=preview1, img2=preview2, groundtruth=groundtruth, prediction=torch_mask, fig_name=file_path)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
