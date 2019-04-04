@@ -158,7 +158,8 @@ for epoch in range(opt.epochs):
         ### Output full test image
         ###
         print ("STARTING FULL VALIDATION IMAGE INFERENCES", mean_val_metrics)
-        for city in opt.validation_cities:
+        validation_cities = opt.validation_cities.split(',')
+        for city in validation_cities:
             patches1, patches2, hs, ws, lc, lr, h, w  = generate_patches(opt, city)
 
             out = []
