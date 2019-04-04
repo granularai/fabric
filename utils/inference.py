@@ -32,7 +32,7 @@ from utils.dataloaders import city_loader, read_bands, stretch_8bit
 from utils.helpers import log_figure, scale
 
 
-def generate_patches(opt):
+def generate_patches(opt, validation_city):
     """Generates patches for 2 dates based on user defined options for inference.
         NOTE: expects 2 images of same shape, depth=13 under imgs_1, imgs_2 in city name folder
 
@@ -48,8 +48,8 @@ def generate_patches(opt):
 
     """
     # load day 1 and 2 bands
-    d1_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_1/*')
-    d2_bands = glob.glob(opt.data_dir + 'images/' + opt.validation_city + '/imgs_2/*')
+    d1_bands = glob.glob(opt.data_dir + 'images/' + validation_city + '/imgs_1/*')
+    d2_bands = glob.glob(opt.data_dir + 'images/' + validation_city + '/imgs_2/*')
 
     # sort bands to ensure that B01 -> B12 order
     d1_bands.sort()
@@ -64,7 +64,7 @@ def generate_patches(opt):
     print ('Bands read')
 
     # TEMPORARY FIX: switching width and height seems to fix image generation...
-    imgs_stacked = city_loader([opt.data_dir + 'images/' + opt.validation_city, template_img.width,template_img.height])
+    imgs_stacked = city_loader([opt.data_dir + 'images/' + validation_city, template_img.width,template_img.height])
 
     d1 = imgs_stacked[0]
     d2 = imgs_stacked[1]
@@ -86,7 +86,7 @@ def generate_patches(opt):
     return patches1, patches2, hs, ws, lc, lr, h, w
 
 
-def log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, device, comet):
+def log_full_image(out, hs, ws, lc, lr, h, w, opt, validation_city, epoch, device, comet):
     """Given a list of patch arrays, constructs an inference output and logs to comet
 
     Parameters
@@ -119,13 +119,13 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, device, comet):
 
     torch_mask = torch.from_numpy(mask).float().to(device)
 
-    file_path = opt.validation_city+'_epoch_'+str(epoch)
+    file_path = validation_city+'_epoch_'+str(epoch)
     cv2.imwrite(file_path+'.png', scale(mask))
     comet.log_image(file_path+'.png')
 
-    preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + opt.validation_city + '/pair/img1.png', 1))
-    preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + opt.validation_city + '/pair/img2.png', 1))
-    groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels/' + opt.validation_city + '/cm/cm.png', 0))
+    preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + validation_city + '/pair/img1.png', 1))
+    preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + validation_city + '/pair/img2.png', 1))
+    groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels/' + validation_city + '/cm/cm.png', 0))
     log_figure(comet, img1=preview1, img2=preview2, groundtruth=groundtruth, prediction=torch_mask, fig_name=file_path)
 
 

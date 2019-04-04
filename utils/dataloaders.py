@@ -149,8 +149,7 @@ def full_onera_loader(data_dir):
 
     label_paths = []
     for city in cities:
-        if '.txt' not in city:
-            label_paths.append(data_dir + 'labels/' + city)
+        label_paths.append(data_dir + 'labels/' + city)
 
     pool = Pool(len(label_paths))
     city_labels = pool.map(label_loader, label_paths)
@@ -158,9 +157,8 @@ def full_onera_loader(data_dir):
     city_paths_meta = []
     i = 0
     for city in cities:
-        if '.txt' not in city:
-            city_paths_meta.append([data_dir + 'images/' + city, city_labels[i].shape[1], city_labels[i].shape[0]])
-            i += 1
+        city_paths_meta.append([data_dir + 'images/' + city, city_labels[i].shape[1], city_labels[i].shape[0]])
+        i += 1
 
     city_loads = pool.map(city_loader, city_paths_meta)
 

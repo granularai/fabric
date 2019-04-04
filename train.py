@@ -157,24 +157,25 @@ for epoch in range(opt.epochs):
         ###
         ### Output full test image
         ###
-        print ("STARTING FULL VALIDATION IMAGE INFERENCE", mean_val_metrics)
-        patches1, patches2, hs, ws, lc, lr, h, w  = generate_patches(opt)
+        print ("STARTING FULL VALIDATION IMAGE INFERENCES", mean_val_metrics)
+        for city in opt.validation_cities:
+            patches1, patches2, hs, ws, lc, lr, h, w  = generate_patches(opt, city)
 
-        out = []
-        for i in range(0,patches1.shape[0],opt.batch_size):
-            batch1 = torch.from_numpy(patches1[i:i+opt.batch_size,:,:,:]).to(device)
-            batch2 = torch.from_numpy(patches2[i:i+opt.batch_size,:,:,:]).to(device)
+            out = []
+            for i in range(0,patches1.shape[0],opt.batch_size):
+                batch1 = torch.from_numpy(patches1[i:i+opt.batch_size,:,:,:]).to(device)
+                batch2 = torch.from_numpy(patches2[i:i+opt.batch_size,:,:,:]).to(device)
 
-            preds = model(batch1, batch2)
+                preds = model(batch1, batch2)
 
-            del batch1, batch2
+                del batch1, batch2
 
-            _, cd_preds = torch.max(preds, 1)
+                _, cd_preds = torch.max(preds, 1)
 
-            cd_preds = cd_preds.data.cpu().numpy()
-            out.append(cd_preds)
+                cd_preds = cd_preds.data.cpu().numpy()
+                out.append(cd_preds)
 
-        log_full_image(out, hs, ws, lc, lr, h, w, opt, epoch, device, comet)
+            log_full_image(out, hs, ws, lc, lr, h, w, opt, city, epoch, device, comet)
 
     if (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores']) or (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls']) or (mean_val_metrics['cd_precisions'] > best_metrics['cd_precisions']):
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
