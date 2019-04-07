@@ -1,40 +1,27 @@
-import sys
-import os, csv, random, math, json
 import glob
+from os import path
 
 import rasterio
 import cv2
 
 from sklearn.feature_extraction import image
 
-from multiprocessing import Pool
-
-from PIL import Image
 import numpy as np
-import pandas as pd
-
-import skimage.io
-from scipy.ndimage import zoom
-from skimage.transform import resize
-
 import torch
-import torch.utils.data as data
-from torch.autograd import Variable
 
-from torchvision import transforms
-from torchvision.transforms import functional
-from functools import partial
-
-import matplotlib.pyplot as plt
-
-sys.path.append('..')
-from utils.dataloaders import city_loader, read_bands, stretch_8bit
+from utils.dataloaders import city_loader, stretch_8bit
 from utils.helpers import log_figure, scale
+
+
+def get_path(path_list):
+    path_components = [i.strip('/') for i in path_list]
+    return path.join(*path_components)
 
 
 def generate_patches(opt, validation_city):
     """Generates patches for 2 dates based on user defined options for inference.
-        NOTE: expects 2 images of same shape, depth=13 under imgs_1, imgs_2 in city name folder
+        NOTE: expects 2 images of same shape, depth=13
+              under imgs_1, imgs_2 in city name folder
 
     Parameters
     ----------
@@ -48,46 +35,45 @@ def generate_patches(opt, validation_city):
 
     """
     # load day 1 and 2 bands
-    d1_bands = glob.glob(opt.data_dir + 'images/' + validation_city + '/imgs_1/*')
-    d2_bands = glob.glob(opt.data_dir + 'images/' + validation_city + '/imgs_2/*')
+    d1_path = get_path([opt.data_dir, 'images/', validation_city, '/imgs_1/*'])
+    d2_path = get_path([opt.data_dir, 'images/', validation_city, '/imgs_2/*'])
+    d1_bands = glob.glob(d1_path)
+    d2_bands = glob.glob(d2_path)
 
     # sort bands to ensure that B01 -> B12 order
     d1_bands.sort()
     d2_bands.sort()
 
-    # load band 2 from d1 bands to get template image dimensions, profile
-    template_img = rasterio.open(d1_bands[2])
-    profile = template_img.profile
+    # load band 2 from d1 bands to get template image dimensions
+    template = rasterio.open(d1_bands[2])
 
-    # read all the bands from d1 and d2 by simply rio opening the files
-    d1d2 = read_bands(d1_bands + d2_bands)
-    print ('Bands read')
-
-    # TEMPORARY FIX: switching width and height seems to fix image generation...
-    imgs_stacked = city_loader([opt.data_dir + 'images/' + validation_city, template_img.width,template_img.height])
+    # TEMPORARY FIX: switching width and height seems to fix image generation
+    city_dir = get_path(opt.data_dir, 'images/', validation_city)
+    imgs_stacked = city_loader([city_dir, template.width, template.height])
 
     d1 = imgs_stacked[0]
     d2 = imgs_stacked[1]
 
     # move image depth
-    d1 = d1.transpose(1,2,0)
-    d2 = d2.transpose(1,2,0)
+    d1 = d1.transpose(1, 2, 0)
+    d2 = d2.transpose(1, 2, 0)
 
     patches1, hs, ws, lc, lr, h, w = _get_patches(d1, patch_dim=opt.patch_size)
+    patches1 = patches1.transpose(0, 3, 1, 2)
 
-    patches1 = patches1.transpose(0,3,1,2)
-
-    print ('Patches1 Created')
+    print('Patches 1 Created')
 
     patches2, hs, ws, lc, lr, h, w = _get_patches(d2, patch_dim=opt.patch_size)
-    patches2 = patches2.transpose(0,3,1,2)
+    patches2 = patches2.transpose(0, 3, 1, 2)
 
-    print ('Patches2 Created')
+    print('Patches 2 Created')
     return patches1, patches2, hs, ws, lc, lr, h, w
 
 
-def log_full_image(out, hs, ws, lc, lr, h, w, opt, validation_city, epoch, device, comet):
-    """Given a list of patch arrays, constructs an inference output and logs to comet
+def log_full_image(out, hs, ws, lc, lr, h, w, opt,
+                   validation_city, epoch, device, comet):
+    """Given a list of patch arrays, constructs an inference output
+       and logs to comet
 
     Parameters
     ----------
@@ -123,16 +109,34 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt, validation_city, epoch, devic
     cv2.imwrite(file_path+'.png', scale(mask))
     comet.log_image(file_path+'.png')
 
-    preview1 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + validation_city + '/pair/img1.png', 1))
-    preview2 = stretch_8bit(cv2.imread(opt.data_dir + 'images/' + validation_city + '/pair/img2.png', 1))
-    groundtruth = torch.from_numpy(cv2.imread(opt.data_dir + 'labels/' + validation_city + '/cm/cm.png', 0))
-    log_figure(comet, img1=preview1, img2=preview2, groundtruth=groundtruth, prediction=torch_mask, fig_name=file_path)
+    preview1_path = get_path(opt.data_dir,
+                             'images/',
+                             validation_city,
+                             '/pair/img1.png')
+    preview2_path = get_path(opt.data_dir,
+                             'images/',
+                             validation_city,
+                             '/pair/img2.png')
+    groundtruth_path = get_path(opt.data_dir,
+                                'labels/',
+                                validation_city,
+                                '/cm/cm.png')
+    preview1 = stretch_8bit(cv2.imread(preview1_path, 1))
+    preview2 = stretch_8bit(cv2.imread(preview2_path, 1))
+    groundtruth = torch.from_numpy(cv2.imread(groundtruth_path, 0))
 
+    log_figure(comet,
+               img1=preview1,
+               img2=preview2,
+               groundtruth=groundtruth,
+               prediction=torch_mask,
+               fig_name=file_path)
 
 
 def _get_patches(bands, patch_dim=64):
-    """given a 13 band image, get a stack of patches with metadata for reconstruction
-    (last row/column position, corner position, original image size)
+    """given a 13 band image, get a stack of patches
+       with metadata for reconstruction
+       (last row/column position, corner position, original image size)
 
     Parameters
     ----------
@@ -147,16 +151,30 @@ def _get_patches(bands, patch_dim=64):
         patches with metadata for reconstruction
 
     """
-    patches = image.extract_patches(bands, (patch_dim, patch_dim, 13), patch_dim)
+    patches = image.extract_patches(bands,
+                                    (patch_dim, patch_dim, 13),
+                                    patch_dim)
     hs, ws = patches.shape[0], patches.shape[1]
     patches = patches.reshape(-1, patch_dim, patch_dim, 13)
 
-    last_row = bands[bands.shape[0]-patch_dim:,:,:]
-    last_column = bands[:,bands.shape[1]-patch_dim:,:]
-    corner = np.asarray([bands[bands.shape[0]-patch_dim:,bands.shape[1]-patch_dim:,:]])
+    last_row = bands[bands.shape[0]-patch_dim:, :, :]
+    last_column = bands[:, bands.shape[1]-patch_dim:, :]
+    corner = np.asarray([bands[bands.shape[0]-patch_dim:,
+                         bands.shape[1]-patch_dim:,
+                         :]])
 
-    last_column = image.extract_patches(last_column, (patch_dim,patch_dim,13), patch_dim).reshape(-1, patch_dim, patch_dim, 13)
-    last_row = image.extract_patches(last_row, (patch_dim,patch_dim,13), patch_dim).reshape(-1, patch_dim, patch_dim, 13)
+    last_column = image.extract_patches(last_column,
+                                        (patch_dim, patch_dim, 13),
+                                        patch_dim).reshape(-1,
+                                                           patch_dim,
+                                                           patch_dim,
+                                                           13)
+    last_row = image.extract_patches(last_row,
+                                     (patch_dim, patch_dim, 13),
+                                     patch_dim).reshape(-1,
+                                                        patch_dim,
+                                                        patch_dim,
+                                                        13)
 
     lc = last_column.shape[0]
     lr = last_row.shape[0]
@@ -164,8 +182,10 @@ def _get_patches(bands, patch_dim=64):
     patches = np.vstack((patches, last_column, last_row, corner))
     return patches, hs, ws, lc, lr, bands.shape[0], bands.shape[1]
 
+
 def _get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
-    """This method allows us to reconstruct an image from a stack of patches and return a composite numpy array
+    """This method allows us to reconstruct an image from a stack of patches
+       and return a composite numpy array
 
     Parameters
     ----------
@@ -197,19 +217,22 @@ def _get_bands(patches, hs, ws, lc, lr, h, w, patch_size=64):
     last_column = patches[-lc-lr-1:-lr-1]
     patches = patches[:-lc-lr-1]
 
-    img = np.zeros((h,w))
+    img = np.zeros((h, w))
     k = 0
     for i in range(hs):
         for j in range(ws):
-            img[i*patch_size:i*patch_size+patch_size,j*patch_size:j*patch_size+patch_size] = patches[k]
+            img[i*patch_size:i*patch_size+patch_size,
+                j*patch_size:j*patch_size+patch_size] = patches[k]
             k += 1
 
     for i in range(lc):
-        img[i*patch_size:i*patch_size+patch_size,w-patch_size:] = last_column[i]
+        img[i*patch_size:i*patch_size+patch_size,
+            w-patch_size:] = last_column[i]
 
     for i in range(lr):
-        img[h-patch_size:,i*patch_size:i*patch_size+patch_size] = last_row[i]
+        img[h-patch_size:,
+            i*patch_size:i*patch_size+patch_size] = last_row[i]
 
-    img[h-patch_size:,w-patch_size:] = corner
+    img[h-patch_size:, w-patch_size:] = corner
 
     return img
