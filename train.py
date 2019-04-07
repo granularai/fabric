@@ -6,12 +6,11 @@ import torch.utils.data
 import torch.optim as optim
 import torch.autograd as autograd
 
-from .utils.parser import get_parser_with_args
-from .utils.helpers import (get_loaders, define_output_paths,
-                            download_dataset, get_criterion,
-                            load_model, initialize_metrics, get_mean_metrics,
-                            set_metrics, log_patches)
-from .utils.inference import generate_patches, log_full_image
+from utils.parser import get_parser_with_args
+from utils.helpers import (get_loaders, download_dataset, get_criterion,
+                           load_model, initialize_metrics, get_mean_metrics,
+                           set_metrics, log_patches)
+from utils.inference import generate_patches, log_full_image
 
 
 from polyaxon_client.tracking import Experiment
@@ -41,8 +40,7 @@ comet.log_parameters(vars(opt))
 """
 Set up environment: define paths, download data, and set device
 """
-weight_path, log_path = define_output_paths(opt)
-dev = torch.dev('cuda:0' if torch.cuda.is_available() else 'cpu')
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 logging.info('GPU AVAILABLE? ' + str(torch.cuda.is_available()))
 download_dataset(opt.dataset, comet)
 train_loader, val_loader = get_loaders(opt)
@@ -77,7 +75,9 @@ for epoch in range(opt.epochs):
         logging.info('SET model mode to train!')
         batch_iter = 0
         for batch_img1, batch_img2, labels in train_loader:
-            logging.info("batch info ", batch_iter, batch_iter+opt.batch_size)
+            logging.info("batch info " +
+                         str(batch_iter) + " - " +
+                         str(batch_iter+opt.batch_size))
             batch_iter = batch_iter+opt.batch_size
 
             # Set variables for training

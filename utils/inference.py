@@ -48,7 +48,7 @@ def generate_patches(opt, validation_city):
     template = rasterio.open(d1_bands[2])
 
     # TEMPORARY FIX: switching width and height seems to fix image generation
-    city_dir = get_path(opt.data_dir, 'images/', validation_city)
+    city_dir = get_path([opt.data_dir, 'images/', validation_city])
     imgs_stacked = city_loader([city_dir, template.width, template.height])
 
     d1 = imgs_stacked[0]
@@ -109,18 +109,18 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt,
     cv2.imwrite(file_path+'.png', scale(mask))
     comet.log_image(file_path+'.png')
 
-    preview1_path = get_path(opt.data_dir,
+    preview1_path = get_path([opt.data_dir,
+                              'images/',
+                              validation_city,
+                              '/pair/img1.png'])
+    preview2_path = get_path([opt.data_dir,
                              'images/',
-                             validation_city,
-                             '/pair/img1.png')
-    preview2_path = get_path(opt.data_dir,
-                             'images/',
-                             validation_city,
-                             '/pair/img2.png')
-    groundtruth_path = get_path(opt.data_dir,
+                              validation_city,
+                              '/pair/img2.png'])
+    groundtruth_path = get_path([opt.data_dir,
                                 'labels/',
-                                validation_city,
-                                '/cm/cm.png')
+                                 validation_city,
+                                 '/cm/cm.png'])
     preview1 = stretch_8bit(cv2.imread(preview1_path, 1))
     preview2 = stretch_8bit(cv2.imread(preview2_path, 1))
     groundtruth = torch.from_numpy(cv2.imread(groundtruth_path, 0))
