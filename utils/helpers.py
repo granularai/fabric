@@ -1,5 +1,5 @@
 import logging
-from polyaxon_client.tracking import get_data_paths, get_outputs_path
+from polyaxon_client.tracking import get_data_paths
 from polystores.stores.manager import StoreManager
 import time
 import tarfile
@@ -8,24 +8,22 @@ import tarfile
 import torch
 import torch.utils.data
 import torch.nn as nn
+import numpy as np
 
-import sys
-
-sys.path.append('..')
-from utils.dataloaders import *
-from models.bidate_model import *
-from utils.metrics import *
+from utils.dataloaders import (get_train_val_metadata,
+                               full_onera_loader,
+                               OneraPreloader)
+from models.bidate_model import BiDateNet
+from utils.metrics import TverskyLoss, jaccard_loss, FocalLoss, dice_loss
 
 import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.INFO)
 
 
-
-
-
 def initialize_metrics():
-    """Generates a dictionary of metrics with metrics as keys and empty lists as values
+    """Generates a dictionary of metrics with metrics as keys
+       and empty lists as values
 
     Returns
     -------
@@ -33,7 +31,7 @@ def initialize_metrics():
         a dictionary of metrics
 
     """
-    metrics={
+    metrics = {
         'cd_losses': [],
         'cd_corrects': [],
         'cd_precisions': [],
@@ -42,7 +40,6 @@ def initialize_metrics():
     }
 
     return metrics
-
 
 
 def get_mean_metrics(metric_dict):
@@ -59,8 +56,7 @@ def get_mean_metrics(metric_dict):
         dict of floats that reflect mean metric value
 
     """
-    return {k:np.mean(v) for k,v in metric_dict.items()}
-
+    return {k: np.mean(v) for k, v in metric_dict.items()}
 
 
 def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report):
@@ -92,6 +88,7 @@ def set_metrics(metric_dict, cd_loss, cd_corrects, cd_report):
 
     return metric_dict
 
+
 def log_patches(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
     """Logs specified patches with real image patch and groundtruth label to comet
 
@@ -105,30 +102,35 @@ def log_patches(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
         date 1 image stack correlated to batch of predictions
     batch_img2 : np.array
         date 2 image stack correlated to batch of predictions
-    labels : np.array
+    labels : torch.tensor
         groundtruth array correlated to batch of predictions
-    cd_preds : np.array
+    cd_preds : torch.tensor
         batch of predictions
 
 
     """
     batch_size = batch_img1.shape[0]
-    samples = list(range(0,batch_size,10))
+    samples = list(range(0, batch_size, 10))
     for sample in samples:
         sample_img1 = _denorm_image(batch_img1, sample)
         sample_img2 = _denorm_image(batch_img2, sample)
 
-        #log cd
-        cd_figname='epoch_'+str(epoch)+'_change_detection_sample_'+str(sample)
-        log_figure(comet, sample_img1, sample_img2, labels[sample], cd_preds[sample], fig_name=cd_figname)
+        # log cd
+        cd_figname = 'epoch_'+str(epoch)+'_cd_sample_'+str(sample)
+        log_figure(comet,
+                   sample_img1,
+                   sample_img2,
+                   labels[sample].cpu().numpy(),
+                   cd_preds[sample].cpu().numpy(),
+                   fig_name=cd_figname)
 
 
-def _denorm_image(image_tensor, sample):
+def _denorm_image(img_tsr, sample):
     """takes a tensor and returns a normalized array
 
     Parameters
     ----------
-    image_tensor : torch.tensor
+    img_tsr : torch.tensor
         cuda tensor of image
     sample : int
         sample of interest from image_tensor
@@ -139,8 +141,13 @@ def _denorm_image(image_tensor, sample):
         scaled, flipped array
 
     """
-    np_arr = torch.flip(image_tensor[sample][1:4,:,:],[0]).permute(1,2,0).cpu().numpy()
+    # select the sample of interest from bands 2-4, flip for rgb, move depth
+    trans_torch = torch.flip(img_tsr[sample][1:4, :, :], [0]).permute(1, 2, 0)
+
+    # Convert to a numpy array
+    np_arr = trans_torch.cpu().numpy()
     return scale(np_arr).astype(int)
+
 
 def scale(x, out_range=(0, 255)):
     """scales an array to specified range (default: 0-255)
@@ -160,7 +167,11 @@ def scale(x, out_range=(0, 255)):
     """
     domain = np.min(x), np.max(x)
     y = (x - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
-    return y * (out_range[1] - out_range[0]) + (out_range[1] + out_range[0]) / 2
+    return (y *
+            (out_range[1] - out_range[0]) +
+            (out_range[1] + out_range[0]) /
+            2)
+
 
 def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
     """logs a set of arrays to a figure and uploads to comet
@@ -173,31 +184,33 @@ def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
         3 band image1 array
     img2 : np.array
         3 band image1 array
-    groundtruth : torch.tensor
-        groundtruth tensor of depth 1
-    prediction : torch.tensor
-        prediction tensor of depth 1
+    groundtruth : np.array
+        groundtruth array of depth 1
+    prediction : np.array
+        prediction array of depth 1
     fig_name : string
         log name of figure
 
     """
-    fig, axarr = plt.subplots(2,2)
-    axarr[0,0].set_title("Date 1")
-    axarr[0,0].imshow(img1)
-    axarr[0,1].set_title("Date 2")
-    axarr[0,1].imshow(img2)
-    axarr[1,0].set_title("Groundtruth")
-    axarr[1,0].imshow(groundtruth.cpu().numpy())
-    axarr[1,1].set_title("Prediction")
-    axarr[1,1].imshow(prediction.cpu().numpy())
+    fig, axarr = plt.subplots(2, 2)
+    axarr[0, 0].set_title("Date 1")
+    axarr[0, 0].imshow(img1)
+    axarr[0, 1].set_title("Date 2")
+    axarr[0, 1].imshow(img2)
+    axarr[1, 0].set_title("Groundtruth")
+    axarr[1, 0].imshow(groundtruth)
+    axarr[1, 1].set_title("Prediction")
+    axarr[1, 1].imshow(prediction)
     plt.setp(axarr, xticks=[], yticks=[])
 
     comet.log_figure(figure=fig, figure_name=fig_name)
 
     plt.close(fig=fig)
 
+
 def get_loaders(opt):
-    """Given user arguments, loads dataset metadata, loads full onera dataset, defines a preloader and returns train and val dataloaders
+    """Given user arguments, loads dataset metadata, loads full onera dataset,
+       defines a preloader and returns train and val dataloaders
 
     Parameters
     ----------
@@ -210,7 +223,10 @@ def get_loaders(opt):
         returns train and val dataloaders
 
     """
-    train_samples, val_samples = get_train_val_metadata(opt.data_dir, opt.val_cities, opt.patch_size, opt.stride)
+    train_samples, val_samples = get_train_val_metadata(opt.data_dir,
+                                                        opt.val_cities,
+                                                        opt.patch_size,
+                                                        opt.stride)
     print('train samples : ', len(train_samples))
     print('val samples : ', len(val_samples))
 
@@ -218,15 +234,28 @@ def get_loaders(opt):
 
     full_load = full_onera_loader(opt.data_dir)
 
-    train_dataset = OneraPreloader(opt.data_dir, train_samples, full_load, opt.patch_size, opt.aug)
-    val_dataset = OneraPreloader(opt.data_dir, val_samples, full_load, opt.patch_size, False)
+    train_dataset = OneraPreloader(opt.data_dir,
+                                   train_samples,
+                                   full_load,
+                                   opt.patch_size,
+                                   opt.aug)
+    val_dataset = OneraPreloader(opt.data_dir,
+                                 val_samples,
+                                 full_load,
+                                 opt.patch_size,
+                                 False)
 
     logging.info('STARTING Dataloading')
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=opt.num_workers)
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=opt.batch_size,
+                                               shuffle=True,
+                                               num_workers=opt.num_workers)
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=opt.batch_size,
+                                             shuffle=False,
+                                             num_workers=opt.num_workers)
     return train_loader, val_loader
-
 
 
 def download_dataset(target_dataset, comet):
@@ -235,8 +264,8 @@ def download_dataset(target_dataset, comet):
     Parameters
     ----------
     target_dataset : string
-        `target_dataset` is the file name at the base of attached cloud storage eg (GCS: /data)
-
+        `target_dataset` is the file name at the base of attached cloud storage
+         eg (GCS: /data)
 
     """
     data_paths = list(get_data_paths().values())[0]
@@ -247,55 +276,13 @@ def download_dataset(target_dataset, comet):
     start = time.time()
     data_store.download_file(target_dataset)
     end = time.time()
-    logging.info('DOWNLOAD time taken: '+ str(end - start))
+    logging.info('DOWNLOAD time taken: ' + str(end - start))
     comet.log_dataset_hash(target_dataset)
     if target_dataset.endswith('.tar.gz'):
         logging.info('STARTING untarring')
         tf = tarfile.open(target_dataset)
         tf.extractall()
         logging.info('COMPLETING untarring')
-
-
-
-
-def define_output_paths(opt):
-    """Uses user defined options (or defaults) to define an appropriate output path
-
-    Parameters
-    ----------
-    opt : dict
-        Dictionary of options/flags
-
-    Returns
-    -------
-    string
-        output path
-
-    """
-
-    model_name = 'cd'
-
-    if opt.loss == 'bce' or opt.loss == 'dice' or opt.loss == 'jaccard':
-        path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-                '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss  + \
-                '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-                '_valCities_' + opt.val_cities
-
-    if opt.loss == 'focal':
-        path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-                '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_gamma_' + str(opt.gamma) + \
-                '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-                '_valCities_' + opt.val_cities
-
-    if opt.loss == 'tversky':
-        path = model_name + '_patchSize_' + str(opt.patch_size) + '_stride_' + str(opt.stride) + \
-                '_batchSize_' + str(opt.batch_size) + '_loss_' + opt.loss + '_alpha_' + str(opt.alpha) + '_beta_' + str(opt.beta) + \
-                '_lr_' + str(opt.lr) + '_epochs_' + str(opt.epochs) +\
-                '_valCities_' + opt.val_cities
-
-    weight_path = opt.weight_dir + path + '.pt'
-    log_path = opt.log_dir + path + '.log'
-    return weight_path, log_path
 
 
 def get_criterion(opt):
@@ -326,6 +313,7 @@ def get_criterion(opt):
 
     return criterion
 
+
 def load_model(opt, device):
     """Loads the model specific to user flags
 
@@ -342,9 +330,9 @@ def load_model(opt, device):
         DataParallel model
 
     """
-
+    device_ids = [int(x) for x in opt.gpu_ids.split(',')]
     model = BiDateNet(13, 2).to(device)
-    model = nn.DataParallel(model, device_ids=[int(x) for x in opt.gpu_ids.split(',')])
+    model = nn.DataParallel(model, device_ids=device_ids)
 
     return model
 

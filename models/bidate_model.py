@@ -1,6 +1,8 @@
-import torch.nn.functional as F
+import torch
+import torch.nn as nn
 
-from .unet_parts import *
+from .unet_parts import down, outconv, up, inconv
+
 
 class BiDateNet(nn.Module):
     def __init__(self, n_channels, n_classes):
