@@ -7,7 +7,6 @@ import cv2
 from sklearn.feature_extraction import image
 
 import numpy as np
-import torch
 
 from utils.dataloaders import city_loader, stretch_8bit
 from utils.helpers import log_figure, scale
@@ -119,7 +118,7 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt,
                                 'labels/',
                                  validation_city,
                                  '/cm/cm.png'])
-    
+
     preview1 = stretch_8bit(cv2.imread(preview1_path, 1))
     preview2 = stretch_8bit(cv2.imread(preview2_path, 1))
     groundtruth = cv2.imread(groundtruth_path, 0)
