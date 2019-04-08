@@ -103,8 +103,6 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt,
 
     mask = _get_bands(out, hs, ws, lc, lr, h, w, patch_size=opt.patch_size)
 
-    torch_mask = torch.from_numpy(mask).float().to(device)
-
     file_path = validation_city+'_epoch_'+str(epoch)
     cv2.imwrite(file_path+'.png', scale(mask))
     comet.log_image(file_path+'.png')
@@ -121,15 +119,16 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt,
                                 'labels/',
                                  validation_city,
                                  '/cm/cm.png'])
+    
     preview1 = stretch_8bit(cv2.imread(preview1_path, 1))
     preview2 = stretch_8bit(cv2.imread(preview2_path, 1))
-    groundtruth = torch.from_numpy(cv2.imread(groundtruth_path, 0))
+    groundtruth = cv2.imread(groundtruth_path, 0)
 
     log_figure(comet,
                img1=preview1,
                img2=preview2,
                groundtruth=groundtruth,
-               prediction=torch_mask,
+               prediction=mask,
                fig_name=file_path)
 
 

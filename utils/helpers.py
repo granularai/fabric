@@ -102,9 +102,9 @@ def log_patches(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
         date 1 image stack correlated to batch of predictions
     batch_img2 : np.array
         date 2 image stack correlated to batch of predictions
-    labels : np.array
+    labels : torch.tensor
         groundtruth array correlated to batch of predictions
-    cd_preds : np.array
+    cd_preds : torch.tensor
         batch of predictions
 
 
@@ -120,8 +120,8 @@ def log_patches(comet, epoch, batch_img1, batch_img2, labels, cd_preds):
         log_figure(comet,
                    sample_img1,
                    sample_img2,
-                   labels[sample],
-                   cd_preds[sample],
+                   labels[sample].cpu().numpy(),
+                   cd_preds[sample].cpu().numpy(),
                    fig_name=cd_figname)
 
 
@@ -184,10 +184,10 @@ def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
         3 band image1 array
     img2 : np.array
         3 band image1 array
-    groundtruth : torch.tensor
-        groundtruth tensor of depth 1
-    prediction : torch.tensor
-        prediction tensor of depth 1
+    groundtruth : np.array
+        groundtruth array of depth 1
+    prediction : np.array
+        prediction array of depth 1
     fig_name : string
         log name of figure
 
@@ -198,9 +198,9 @@ def log_figure(comet, img1, img2, groundtruth, prediction, fig_name=''):
     axarr[0, 1].set_title("Date 2")
     axarr[0, 1].imshow(img2)
     axarr[1, 0].set_title("Groundtruth")
-    axarr[1, 0].imshow(groundtruth.cpu().numpy())
+    axarr[1, 0].imshow(groundtruth)
     axarr[1, 1].set_title("Prediction")
-    axarr[1, 1].imshow(prediction.cpu().numpy())
+    axarr[1, 1].imshow(prediction)
     plt.setp(axarr, xticks=[], yticks=[])
 
     comet.log_figure(figure=fig, figure_name=fig_name)
