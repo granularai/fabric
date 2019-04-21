@@ -12,7 +12,6 @@ from utils.helpers import (get_loaders, download_dataset, get_criterion,
                            set_metrics, log_patches)
 from utils.inference import generate_patches, log_full_image
 
-
 from polyaxon_client.tracking import Experiment
 
 import logging
