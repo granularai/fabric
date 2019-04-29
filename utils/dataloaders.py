@@ -52,31 +52,28 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
     cities = [i for i in os.listdir(data_dir + 'labels/') if not
               i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
     cities.sort()
-    val_cities = list(map(int, val_cities.split(',')))
-    train_cities = list(set(range(len(cities))).difference(val_cities))
+    train_cities = list(set(cities).difference(set(val_cities)))
 
     train_metadata = []
     print('cities:', cities)
     print('train_cities:', train_cities)
-    for city_no in train_cities:
-        city_label = cv2.imread(data_dir + 'labels/' + cities[city_no]
-                                + '/cm/cm.png', 0) / 255
+    for city in train_cities:
+        city_label = cv2.imread(data_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
 
         for i in range(0, city_label.shape[0], stride):
             for j in range(0, city_label.shape[1], stride):
                 if ((i + patch_size) <= city_label.shape[0] and
                         (j + patch_size) <= city_label.shape[1]):
-                    train_metadata.append([cities[city_no], i, j])
+                    train_metadata.append([city, i, j])
 
     val_metadata = []
-    for city_no in val_cities:
-        city_label = cv2.imread(data_dir + 'labels/' + cities[city_no] +
-                                '/cm/cm.png', 0) / 255
+    for city in val_cities:
+        city_label = cv2.imread(data_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
         for i in range(0, city_label.shape[0], stride):
             for j in range(0, city_label.shape[1], stride):
                 if ((i + patch_size) <= city_label.shape[0] and
                         (j + patch_size) <= city_label.shape[1]):
-                    val_metadata.append([cities[city_no], i, j])
+                    val_metadata.append([city, i, j])
 
     return train_metadata, val_metadata
 
@@ -90,22 +87,23 @@ def city_loader(city_meta):
     city = city_meta[0]
     h = city_meta[1]
     w = city_meta[2]
+    opt = city_meta[3]
 
     band_path = glob.glob(city + '/imgs_1/*')[0][:-7]
     bands_date1 = []
-    for i in range(len(band_ids)):
-        band = rasterio.open(band_path + band_ids[i] +
+    for i in range(len(opt.band_ids)):
+        band = rasterio.open(band_path + opt.band_ids[i] +
                              '.tif').read()[0].astype(np.float32)
-        band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
+        band = (band - opt.band_means[opt.band_ids[i]]) / opt.band_stds[opt.band_ids[i]]
         band = cv2.resize(band, (h, w))
         bands_date1.append(band)
 
     band_path = glob.glob(city + '/imgs_2/*')[0][:-7]
     bands_date2 = []
-    for i in range(len(band_ids)):
-        band = rasterio.open(band_path + band_ids[i] +
+    for i in range(len(opt.band_ids)):
+        band = rasterio.open(band_path + opt.band_ids[i] +
                              '.tif').read()[0].astype(np.float32)
-        band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
+        band = (band - opt.band_means[opt.band_ids[i]]) / opt.band_stds[opt.band_ids[i]]
         band = cv2.resize(band, (h, w))
         bands_date2.append(band)
 
@@ -114,7 +112,7 @@ def city_loader(city_meta):
     return band_stacked
 
 
-def full_onera_loader(data_dir):
+def full_onera_loader(data_dir, opt):
     cities = [i for i in os.listdir(data_dir + 'labels/') if not
               i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
 
@@ -130,7 +128,7 @@ def full_onera_loader(data_dir):
     for city in cities:
         city_paths_meta.append([data_dir + 'images/' + city,
                                 city_labels[i].shape[1],
-                                city_labels[i].shape[0]])
+                                city_labels[i].shape[0], opt])
         i += 1
 
     city_loads = pool.map(city_loader, city_paths_meta)

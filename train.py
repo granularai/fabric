@@ -15,13 +15,13 @@ from utils.inference import generate_patches, log_full_image
 from polyaxon_client.tracking import Experiment
 
 import logging
+import json
 
 """
 Initialize Parser and define arguments
 """
-parser = get_parser_with_args()
+parser, metadata = get_parser_with_args()
 opt = parser.parse_args()
-
 
 """
 Initialize experiments for polyaxon and comet.ml
@@ -29,7 +29,7 @@ Initialize experiments for polyaxon and comet.ml
 comet = CometExperiment('QQFXdJ5M7GZRGri7CWxwGxPDN',
                         project_name=opt.project_name,
                         auto_param_logging=False,
-                        parse_args=False)
+                        parse_args=False, disabled=False)
 comet.log_other('status', 'started')
 experiment = Experiment()
 logging.basicConfig(level=logging.INFO)
@@ -41,7 +41,7 @@ Set up environment: define paths, download data, and set device
 """
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 logging.info('GPU AVAILABLE? ' + str(torch.cuda.is_available()))
-download_dataset(opt.dataset, comet)
+download_dataset(opt.dataset_name, comet)
 train_loader, val_loader = get_loaders(opt)
 
 
@@ -52,7 +52,7 @@ logging.info('LOADING Model')
 model = load_model(opt, dev)
 
 criterion = get_criterion(opt)
-optimizer = optim.SGD(model.parameters(), lr=opt.lr)
+optimizer = optim.SGD(model.parameters(), lr=opt.learning_rate)
 # optimizer = optim.Adam(model.parameters(), lr=opt.lr, weight_decay=1e-2)
 
 
@@ -176,7 +176,7 @@ for epoch in range(opt.epochs):
         """
         print("STARTING FULL VALIDATION IMAGE INFERENCES", mean_val_metrics)
         # Get a list of all cities we want to log for full inference
-        validation_cities = opt.validation_cities.split(',')
+        validation_cities = opt.validation_cities
 
         # Perform inference then log results for each validation city
         for city in validation_cities:
@@ -212,11 +212,19 @@ for epoch in range(opt.epochs):
             (mean_val_metrics['cd_recalls'] > best_metrics['cd_recalls'])
             or
             (mean_val_metrics['cd_f1scores'] > best_metrics['cd_f1scores'])):
+        #Insert trainin and epoch information to metadata dictionary
+        metadata['validation_metrics'] = mean_val_metrics
+
         # Save to comet.ml and in GCS
+        with open('/tmp/metadata_epoch_' + str(epoch) + '.json', 'w') as fout:
+            json.dump(metadata, fout)
+
         torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
         upload_file_path = '/tmp/checkpoint_epoch_'+str(epoch)+'.pt'
+        upload_metadata_file_path = '/tmp/metadata_epoch_' + str(epoch) + '.json'
         experiment.outputs_store.upload_file(upload_file_path)
-        comet.log_asset('/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
+        experiment.outputs_store.upload_file(upload_metadata_file_path)
+        comet.log_asset(upload_metadata_file_path)
         best_metrics = mean_val_metrics
 
     # Log all train and validation metrics

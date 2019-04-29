@@ -223,8 +223,8 @@ def get_loaders(opt):
         returns train and val dataloaders
 
     """
-    train_samples, val_samples = get_train_val_metadata(opt.data_dir,
-                                                        opt.val_cities,
+    train_samples, val_samples = get_train_val_metadata(opt.dataset_dir,
+                                                        opt.validation_cities,
                                                         opt.patch_size,
                                                         opt.stride)
     print('train samples : ', len(train_samples))
@@ -232,14 +232,14 @@ def get_loaders(opt):
 
     logging.info('STARTING Dataset Creation')
 
-    full_load = full_onera_loader(opt.data_dir)
+    full_load = full_onera_loader(opt.dataset_dir, opt)
 
-    train_dataset = OneraPreloader(opt.data_dir,
+    train_dataset = OneraPreloader(opt.dataset_dir,
                                    train_samples,
                                    full_load,
                                    opt.patch_size,
-                                   opt.aug)
-    val_dataset = OneraPreloader(opt.data_dir,
+                                   opt.augmentation)
+    val_dataset = OneraPreloader(opt.dataset_dir,
                                  val_samples,
                                  full_load,
                                  opt.patch_size,
@@ -300,16 +300,16 @@ def get_criterion(opt):
 
     """
 
-    if opt.loss == 'bce':
+    if opt.loss_function == 'bce':
         criterion = nn.BCEWithLogitsLoss()
-    if opt.loss == 'focal':
-        criterion = FocalLoss(opt.gamma)
-    if opt.loss == 'dice':
+    if opt.loss_function == 'focal':
+        criterion = FocalLoss(opt.focal_gamma)
+    if opt.loss_function == 'dice':
         criterion = dice_loss
-    if opt.loss == 'jaccard':
+    if opt.loss_function == 'jaccard':
         criterion = jaccard_loss
-    if opt.loss == 'tversky':
-        criterion = TverskyLoss(alpha=opt.alpha, beta=opt.beta)
+    if opt.loss_function == 'tversky':
+        criterion = TverskyLoss(alpha=opt.tversky_alpha, beta=opt.tversky_beta)
 
     return criterion
 
@@ -330,7 +330,7 @@ def load_model(opt, device):
         DataParallel model
 
     """
-    device_ids = [int(x) for x in opt.gpu_ids.split(',')]
+    device_ids = list(range(opt.num_gpus))
     model = BiDateNet(13, 2).to(device)
     model = nn.DataParallel(model, device_ids=device_ids)
 
