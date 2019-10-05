@@ -12,37 +12,7 @@ import numpy as np
 import torch.utils.data as data
 
 
-band_ids = ['B01', 'B02', 'B03', 'B04', 'B05',
-            'B06', 'B07', 'B08', 'B8A',
-            'B09', 'B10', 'B11', 'B12']
 
-band_means = {'B01': 1617.5661643050978,
-              'B02': 1422.3719453248793,
-              'B03': 1359.3729378266555,
-              'B04': 1414.6782051630655,
-              'B05': 1557.9375814996074,
-              'B06': 1986.2235117016169,
-              'B07': 2210.5037144727444,
-              'B08': 2118.5600261598356,
-              'B09': 711.83906025521844,
-              'B10': 15.75398180230429,
-              'B11': 2133.9020389587163,
-              'B12': 1584.2672746823432,
-              'B8A': 2344.7920358515848}
-
-band_stds = {'B01': 319.11895245135725,
-             'B02': 456.24958899714318,
-             'B03': 590.13027145320575,
-             'B04': 849.36709395436458,
-             'B05': 811.31234423936974,
-             'B06': 813.54673546588663,
-             'B07': 891.84688914609933,
-             'B08': 901.61466840470621,
-             'B09': 370.95321479704359,
-             'B10': 9.2311736178846093,
-             'B11': 1116.5923795237484,
-             'B12': 985.12262217902412,
-             'B8A': 954.76957663021938}
 
 
 def read_band(band):
@@ -82,31 +52,28 @@ def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
     cities = [i for i in os.listdir(data_dir + 'labels/') if not
               i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
     cities.sort()
-    val_cities = list(map(int, val_cities.split(',')))
-    train_cities = list(set(range(len(cities))).difference(val_cities))
+    train_cities = list(set(cities).difference(set(val_cities)))
 
     train_metadata = []
     print('cities:', cities)
     print('train_cities:', train_cities)
-    for city_no in train_cities:
-        city_label = cv2.imread(data_dir + 'labels/' + cities[city_no]
-                                + '/cm/cm.png', 0) / 255
+    for city in train_cities:
+        city_label = cv2.imread(data_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
 
         for i in range(0, city_label.shape[0], stride):
             for j in range(0, city_label.shape[1], stride):
                 if ((i + patch_size) <= city_label.shape[0] and
                         (j + patch_size) <= city_label.shape[1]):
-                    train_metadata.append([cities[city_no], i, j])
+                    train_metadata.append([city, i, j])
 
     val_metadata = []
-    for city_no in val_cities:
-        city_label = cv2.imread(data_dir + 'labels/' + cities[city_no] +
-                                '/cm/cm.png', 0) / 255
+    for city in val_cities:
+        city_label = cv2.imread(data_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
         for i in range(0, city_label.shape[0], stride):
             for j in range(0, city_label.shape[1], stride):
                 if ((i + patch_size) <= city_label.shape[0] and
                         (j + patch_size) <= city_label.shape[1]):
-                    val_metadata.append([cities[city_no], i, j])
+                    val_metadata.append([city, i, j])
 
     return train_metadata, val_metadata
 
@@ -120,22 +87,23 @@ def city_loader(city_meta):
     city = city_meta[0]
     h = city_meta[1]
     w = city_meta[2]
+    opt = city_meta[3]
 
     band_path = glob.glob(city + '/imgs_1/*')[0][:-7]
     bands_date1 = []
-    for i in range(len(band_ids)):
-        band = rasterio.open(band_path + band_ids[i] +
+    for i in range(len(opt.band_ids)):
+        band = rasterio.open(band_path + opt.band_ids[i] +
                              '.tif').read()[0].astype(np.float32)
-        band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
+        band = (band - opt.band_means[opt.band_ids[i]]) / opt.band_stds[opt.band_ids[i]]
         band = cv2.resize(band, (h, w))
         bands_date1.append(band)
 
     band_path = glob.glob(city + '/imgs_2/*')[0][:-7]
     bands_date2 = []
-    for i in range(len(band_ids)):
-        band = rasterio.open(band_path + band_ids[i] +
+    for i in range(len(opt.band_ids)):
+        band = rasterio.open(band_path + opt.band_ids[i] +
                              '.tif').read()[0].astype(np.float32)
-        band = (band - band_means[band_ids[i]]) / band_stds[band_ids[i]]
+        band = (band - opt.band_means[opt.band_ids[i]]) / opt.band_stds[opt.band_ids[i]]
         band = cv2.resize(band, (h, w))
         bands_date2.append(band)
 
@@ -144,7 +112,7 @@ def city_loader(city_meta):
     return band_stacked
 
 
-def full_onera_loader(data_dir):
+def full_onera_loader(data_dir, opt):
     cities = [i for i in os.listdir(data_dir + 'labels/') if not
               i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
 
@@ -160,7 +128,7 @@ def full_onera_loader(data_dir):
     for city in cities:
         city_paths_meta.append([data_dir + 'images/' + city,
                                 city_labels[i].shape[1],
-                                city_labels[i].shape[0]])
+                                city_labels[i].shape[0], opt])
         i += 1
 
     city_loads = pool.map(city_loader, city_paths_meta)

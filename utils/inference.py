@@ -34,8 +34,8 @@ def generate_patches(opt, validation_city):
 
     """
     # load day 1 and 2 bands
-    d1_path = get_path([opt.data_dir, 'images/', validation_city, '/imgs_1/*'])
-    d2_path = get_path([opt.data_dir, 'images/', validation_city, '/imgs_2/*'])
+    d1_path = get_path([opt.dataset_dir, 'images/', validation_city, '/imgs_1/*'])
+    d2_path = get_path([opt.dataset_dir, 'images/', validation_city, '/imgs_2/*'])
     d1_bands = glob.glob(d1_path)
     d2_bands = glob.glob(d2_path)
 
@@ -47,8 +47,8 @@ def generate_patches(opt, validation_city):
     template = rasterio.open(d1_bands[2])
 
     # TEMPORARY FIX: switching width and height seems to fix image generation
-    city_dir = get_path([opt.data_dir, 'images/', validation_city])
-    imgs_stacked = city_loader([city_dir, template.width, template.height])
+    city_dir = get_path([opt.dataset_dir, 'images/', validation_city])
+    imgs_stacked = city_loader([city_dir, template.width, template.height, opt])
 
     d1 = imgs_stacked[0]
     d2 = imgs_stacked[1]
@@ -106,15 +106,15 @@ def log_full_image(out, hs, ws, lc, lr, h, w, opt,
     cv2.imwrite(file_path+'.png', scale(mask))
     comet.log_image(file_path+'.png')
 
-    preview1_path = get_path([opt.data_dir,
+    preview1_path = get_path([opt.dataset_dir,
                               'images/',
                               validation_city,
                               '/pair/img1.png'])
-    preview2_path = get_path([opt.data_dir,
+    preview2_path = get_path([opt.dataset_dir,
                              'images/',
                               validation_city,
                               '/pair/img2.png'])
-    groundtruth_path = get_path([opt.data_dir,
+    groundtruth_path = get_path([opt.dataset_dir,
                                 'labels/',
                                  validation_city,
                                  '/cm/cm.png'])
