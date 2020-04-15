@@ -212,7 +212,6 @@ def get_dataloaders(opt):
     print('train samples : ', len(train_samples))
     print('val samples : ', len(val_samples))
 
-    logging.info('STARTING Dataset Creation')
 
     full_load = full_onera_loader(opt.dataset_dir, opt)
 
@@ -227,14 +226,13 @@ def get_dataloaders(opt):
                                  opt.patch_size,
                                  False)
 
-    logging.info('STARTING Dataloading')
 
-    train_loader = torch.utils.data.DataLoader(train_dataset,
-                                               batch_size=opt.batch_size,
-                                               shuffle=True,
-                                               num_workers=opt.num_workers)
-    val_loader = torch.utils.data.DataLoader(val_dataset,
-                                             batch_size=opt.batch_size,
-                                             shuffle=False,
-                                             num_workers=opt.num_workers)
+    train_loader = data.DataLoader(train_dataset,
+                                   batch_size=opt.batch_size,
+                                   shuffle=True,
+                                   num_workers=opt.num_workers)
+    val_loader = data.DataLoader(val_dataset,
+                                 batch_size=opt.batch_size,
+                                 shuffle=False,
+                                 num_workers=opt.num_workers)
     return train_loader, val_loader
