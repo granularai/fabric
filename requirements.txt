@@ -1,0 +1,3 @@
+rasterio
+torch
+torchvision
