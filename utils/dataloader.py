@@ -12,9 +12,6 @@ import numpy as np
 import torch.utils.data as data
 
 
-
-
-
 def read_band(band):
     r = rasterio.open(band)
     data = r.read()[0]
