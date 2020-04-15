@@ -1,5 +1,5 @@
 {"sensor": "sentinel2",
-  "input_shape": "2,90,90,13",
+  "input_shape": "2,13,90,90",
   "resolution": 10,
 "band_ids": ["B01", "B02", "B03", "B04", "B05",
             "B06", "B07", "B08", "B8A",
@@ -30,6 +30,8 @@
              "B11": 1116.5923795237484,
              "B12": 985.12262217902412,
              "B8A": 954.76957663021938},
+"num_classes": 2,
+"gpu": 0,
 
 "stretch_8bit": {"lower":2, "higher":98},
 "patch_size": 90,
@@ -41,10 +43,11 @@
 
 "epochs": 1,
 "batch_size": 32,
-"learning_rate": 0.001,
+"lr": 0.001,
 "loss_function": "tversky",
 "tversky_alpha": 0.1,
 "tversky_beta": 0.9,
+"metrics": ["dc", "jc", "prec", "recall"],
 
 "project_name": "ChangeDetection",
 "dataset_name": "onera_w_mask.tar.gz",

@@ -158,7 +158,7 @@ def onera_siamese_loader(dataset, city, x, y, size, aug):
             out_img = np.flip(out_img, axis=3).copy()
             out_lbl = np.flip(out_lbl, axis=1).copy()
 
-    return out_img[0], out_img[1], out_lbl
+    return out_img, out_lbl
 
 
 class OneraPreloader(data.Dataset):

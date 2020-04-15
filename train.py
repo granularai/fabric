@@ -46,7 +46,7 @@ print (len(train_loader))
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = Dummy(n_channels=len(args.band_ids), n_classes=args.num_classes).cuda(args.gpu)
+model = BiDateNet(n_channels=len(args.band_ids), n_classes=args.num_classes).cuda(args.gpu)
 
 criterion = DiceLoss()
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
@@ -58,19 +58,17 @@ if not local_testing():
     """
     train_metrics = Metrics(polyaxon_exp=experiment, metrics_strings=['dc'])
     val_metrics = Metrics(polyaxon_exp=experiment, metrics_strings=['dc'])
-    runner = Runner(device=args.gpu, model=model,
+    runner = Runner(model=model,
                 optimizer=optimizer, criterion=criterion,
                 train_loader=train_loader, val_loader=val_loader,
-                train_metrics=train_metrics, val_metrics=val_metrics,
-                polyaxon_exp=experiment)
+                args=args, polyaxon_exp=experiment)
 else:
     train_metrics = Metrics(metrics_strings=['dc'])
     val_metrics = Metrics(metrics_strings=['dc'])
-    runner = Runner(device=args.gpu, model=model,
+    runner = Runner(model=model,
                 optimizer=optimizer, criterion=criterion,
                 train_loader=train_loader, val_loader=val_loader,
-                train_metrics=train_metrics, val_metrics=val_metrics,
-                polyaxon_exp=None)
+                args=args, polyaxon_exp=None)
 
 logging.info('STARTING training')
 for epoch in range(args.epochs):
