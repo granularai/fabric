@@ -27,7 +27,7 @@ def local_testing():
         False
 
 experiment = None
-if local_testing():
+if not local_testing():
     experiment = Experiment()
 
 grain_exp = Grain(polyaxon_exp=experiment)
@@ -46,29 +46,18 @@ print (len(train_loader))
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = BiDateNet(n_channels=len(args.band_ids), n_classes=args.num_classes).cuda(args.gpu)
+model = BiDateNet(n_channels=len(args.band_ids), n_classes=1).cuda(args.gpu)
 
 criterion = DiceLoss()
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
 # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-2)
 
-if not local_testing():
-    """
-    Initialize experiments for polyaxon
-    """
-    train_metrics = Metrics(polyaxon_exp=experiment, metrics_strings=['dc'])
-    val_metrics = Metrics(polyaxon_exp=experiment, metrics_strings=['dc'])
-    runner = Runner(model=model,
-                optimizer=optimizer, criterion=criterion,
-                train_loader=train_loader, val_loader=val_loader,
-                args=args, polyaxon_exp=experiment)
-else:
-    train_metrics = Metrics(metrics_strings=['dc'])
-    val_metrics = Metrics(metrics_strings=['dc'])
-    runner = Runner(model=model,
-                optimizer=optimizer, criterion=criterion,
-                train_loader=train_loader, val_loader=val_loader,
-                args=args, polyaxon_exp=None)
+
+runner = Runner(model=model,
+            optimizer=optimizer, criterion=criterion,
+            train_loader=train_loader, val_loader=val_loader,
+            args=args, polyaxon_exp=experiment)
+
 
 logging.info('STARTING training')
 for epoch in range(args.epochs):
@@ -79,7 +68,8 @@ for epoch in range(args.epochs):
     runner.set_epoch_metrics()
     train_metrics = runner.train_model()
     eval_metrics = runner.eval_model()
-
+    print (train_metrics)
+    print (eval_metrics)
     """
     Store the weights of good epochs based on validation results
     """
