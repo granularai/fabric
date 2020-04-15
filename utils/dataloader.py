@@ -192,3 +192,49 @@ class OneraPreloader(data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
+def get_dataloaders(opt):
+    """Given user arguments, loads dataset metadata, loads full onera dataset,
+       defines a preloader and returns train and val dataloaders
+    Parameters
+    ----------
+    opt : dict
+        Dictionary of options/flags
+    Returns
+    -------
+    (DataLoader, DataLoader)
+        returns train and val dataloaders
+    """
+    train_samples, val_samples = get_train_val_metadata(opt.dataset_dir,
+                                                        opt.validation_cities,
+                                                        opt.patch_size,
+                                                        opt.stride)
+    print('train samples : ', len(train_samples))
+    print('val samples : ', len(val_samples))
+
+    logging.info('STARTING Dataset Creation')
+
+    full_load = full_onera_loader(opt.dataset_dir, opt)
+
+    train_dataset = OneraPreloader(opt.dataset_dir,
+                                   train_samples,
+                                   full_load,
+                                   opt.patch_size,
+                                   opt.augmentation)
+    val_dataset = OneraPreloader(opt.dataset_dir,
+                                 val_samples,
+                                 full_load,
+                                 opt.patch_size,
+                                 False)
+
+    logging.info('STARTING Dataloading')
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=opt.batch_size,
+                                               shuffle=True,
+                                               num_workers=opt.num_workers)
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=opt.batch_size,
+                                             shuffle=False,
+                                             num_workers=opt.num_workers)
+    return train_loader, val_loader

@@ -16,7 +16,7 @@ from basecamp.metrics.loss import DiceLoss
 from basecamp.runner.runner import Runner
 
 from models.bidate_model import BiDateNet
-# from utils.dataloader import get_dataloaders
+from utils.dataloader import get_dataloaders
 from basecamp.grain.grain import Grain
 
 def local_testing():
@@ -32,7 +32,6 @@ if local_testing():
 
 grain_exp = Grain(polyaxon_exp=experiment)
 args = grain_exp.parse_args_from_json('metadata.json')
-print (args)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,6 +40,7 @@ Set up environment: define paths, download data, and set device
 """
 
 train_loader, val_loader = get_dataloaders(args)
+print (len(train_loader))
 
 """
 Load Model then define other aspects of the model
