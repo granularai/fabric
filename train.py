@@ -17,7 +17,7 @@ from basecamp.runner.runner import Runner
 
 from models.bidate_model import BiDateNet
 # from utils.dataloader import get_dataloaders
-from utils.parser import get_args
+from basecamp.grain.grain import Grain
 
 def local_testing():
     if 'POLYAXON_NO_OP' in os.environ:
@@ -30,7 +30,8 @@ experiment = None
 if local_testing():
     experiment = Experiment()
 
-args = get_args()
+grain_exp = Grain(polyaxon_exp=experiment)
+args = grain_exp.parse_args_from_json('metadata.json')
 print (args)
 
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +39,6 @@ logging.basicConfig(level=logging.INFO)
 """
 Set up environment: define paths, download data, and set device
 """
-
 
 train_loader, val_loader = get_dataloaders(args)
 

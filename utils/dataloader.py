@@ -18,7 +18,6 @@ def read_band(band):
     r.close()
     return data
 
-
 def read_bands(band_paths):
     pool = Pool(26)
     bands = pool.map(read_band, band_paths)
