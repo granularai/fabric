@@ -44,31 +44,34 @@ def stretch_8bit(band, lower_percent=2, higher_percent=98):
     return t.astype(np.uint8)
 
 
-def get_train_val_metadata(data_dir, val_cities, patch_size, stride):
-    cities = [i for i in os.listdir(data_dir + 'labels/') if not
-              i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
+def get_train_val_metadata(args):
+    cities = [i for i in os.listdir(args.dataset_dir + 'labels/') if not
+              i.startswith('.') and os.path.isdir(args.dataset_dir + 'labels/'+i)]
     cities.sort()
-    train_cities = list(set(cities).difference(set(val_cities)))
+    training_cities = list(set(cities).difference(set(args.validation_cities)))
 
     train_metadata = []
-    print('cities:', cities)
-    print('train_cities:', train_cities)
-    for city in train_cities:
-        city_label = cv2.imread(data_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
+    print ('cities :', cities)
+    print ('train_cities :', training_cities)
+    print ('val cities :', args.validation_cities)
 
-        for i in range(0, city_label.shape[0], stride):
-            for j in range(0, city_label.shape[1], stride):
-                if ((i + patch_size) <= city_label.shape[0] and
-                        (j + patch_size) <= city_label.shape[1]):
+    for city in training_cities:
+        city_label = cv2.imread(args.dataset_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
+
+        for i in range(0, city_label.shape[0], args.stride):
+            for j in range(0, city_label.shape[1], args.stride):
+                if ((i + args.input_shape[2]) <= city_label.shape[0] and
+                        (j + args.input_shape[2]) <= city_label.shape[1]) and \
+                        np.sum(city_label[i:i+args.input_shape[2], j:j+args.input_shape[2]]) > args.train_thres:
                     train_metadata.append([city, i, j])
 
     val_metadata = []
-    for city in val_cities:
-        city_label = cv2.imread(data_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
-        for i in range(0, city_label.shape[0], stride):
-            for j in range(0, city_label.shape[1], stride):
-                if ((i + patch_size) <= city_label.shape[0] and
-                        (j + patch_size) <= city_label.shape[1]):
+    for city in args.validation_cities:
+        city_label = cv2.imread(args.dataset_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
+        for i in range(0, city_label.shape[0], args.stride):
+            for j in range(0, city_label.shape[1], args.stride):
+                if ((i + args.input_shape[2]) <= city_label.shape[0] and
+                        (j + args.input_shape[2]) <= city_label.shape[1]):
                     val_metadata.append([city, i, j])
 
     return train_metadata, val_metadata
@@ -83,23 +86,23 @@ def city_loader(city_meta):
     city = city_meta[0]
     h = city_meta[1]
     w = city_meta[2]
-    opt = city_meta[3]
+    args = city_meta[3]
 
     band_path = glob.glob(city + '/imgs_1/*')[0][:-7]
     bands_date1 = []
-    for i in range(len(opt.band_ids)):
-        band = rasterio.open(band_path + opt.band_ids[i] +
+    for i in range(len(args.band_ids)):
+        band = rasterio.open(band_path + args.band_ids[i] +
                              '.tif').read()[0].astype(np.float32)
-        band = (band - opt.band_means[opt.band_ids[i]]) / opt.band_stds[opt.band_ids[i]]
+        band = (band - args.band_means[args.band_ids[i]]) / args.band_stds[args.band_ids[i]]
         band = cv2.resize(band, (h, w))
         bands_date1.append(band)
 
     band_path = glob.glob(city + '/imgs_2/*')[0][:-7]
     bands_date2 = []
-    for i in range(len(opt.band_ids)):
-        band = rasterio.open(band_path + opt.band_ids[i] +
+    for i in range(len(args.band_ids)):
+        band = rasterio.open(band_path + args.band_ids[i] +
                              '.tif').read()[0].astype(np.float32)
-        band = (band - opt.band_means[opt.band_ids[i]]) / opt.band_stds[opt.band_ids[i]]
+        band = (band - args.band_means[args.band_ids[i]]) / args.band_stds[args.band_ids[i]]
         band = cv2.resize(band, (h, w))
         bands_date2.append(band)
 
@@ -108,23 +111,23 @@ def city_loader(city_meta):
     return band_stacked
 
 
-def full_onera_loader(data_dir, opt):
-    cities = [i for i in os.listdir(data_dir + 'labels/') if not
-              i.startswith('.') and os.path.isdir(data_dir+'labels/'+i)]
+def full_onera_loader(args):
+    cities = [i for i in os.listdir(args.dataset_dir + 'labels/') if not
+              i.startswith('.') and os.path.isdir(args.dataset_dir + 'labels/'+i)]
 
     label_paths = []
     for city in cities:
-        label_paths.append(data_dir + 'labels/' + city)
+        label_paths.append(args.dataset_dir + 'labels/' + city)
 
-    pool = Pool(len(label_paths))
+    pool = Pool(min(len(label_paths), args.num_workers))
     city_labels = pool.map(label_loader, label_paths)
 
     city_paths_meta = []
     i = 0
     for city in cities:
-        city_paths_meta.append([data_dir + 'images/' + city,
+        city_paths_meta.append([args.dataset_dir + 'images/' + city,
                                 city_labels[i].shape[1],
-                                city_labels[i].shape[0], opt])
+                                city_labels[i].shape[0], args])
         i += 1
 
     city_loads = pool.map(city_loader, city_paths_meta)
@@ -141,9 +144,9 @@ def full_onera_loader(data_dir, opt):
     return dataset
 
 
-def onera_siamese_loader(dataset, city, x, y, size, aug):
-    out_img = np.copy(dataset[city]['images'][:, :, x:x+size, y:y+size])
-    out_lbl = np.copy(dataset[city]['labels'][x:x+size, y:y+size])
+def onera_siamese_loader(dataset, city, x, y, aug, args):
+    out_img = np.copy(dataset[city]['images'][:, :, x : x + args.input_shape[2], y : y + args.input_shape[2]])
+    out_lbl = np.copy(dataset[city]['labels'][x : x + args.input_shape[2], y : y + args.input_shape[2]])
 
     if aug:
         rot_deg = random.randint(0, 3)
@@ -163,15 +166,14 @@ def onera_siamese_loader(dataset, city, x, y, size, aug):
 
 class OneraPreloader(data.Dataset):
 
-    def __init__(self, root, metadata, full_load, input_size, aug=False):
+    def __init__(self, metadata, full_load, aug=False, args=None):
         random.shuffle(metadata)
 
         self.full_load = full_load
-        self.root = root
-        self.imgs = metadata
+        self.samples = metadata
         self.loader = onera_siamese_loader
         self.aug = aug
-        self.input_size = input_size
+        self.args = args
 
     def __getitem__(self, index):
         """
@@ -181,58 +183,44 @@ class OneraPreloader(data.Dataset):
             tuple: (image, target) where target is class_index
                    of the target class.
         """
-        city, x, y = self.imgs[index]
+        city, x, y = self.samples[index]
 
-        return self.loader(self.full_load,
-                           city,
-                           x,
-                           y,
-                           self.input_size,
-                           self.aug)
+        return self.loader(self.full_load, city, x, y, self.aug, self.args)
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.samples)
 
-def get_dataloaders(opt):
+def get_dataloaders(args):
     """Given user arguments, loads dataset metadata, loads full onera dataset,
        defines a preloader and returns train and val dataloaders
     Parameters
     ----------
-    opt : dict
-        Dictionary of options/flags
+    args : dict
+        Dictionary of argsions/flags
     Returns
     -------
     (DataLoader, DataLoader)
         returns train and val dataloaders
     """
-    train_samples, val_samples = get_train_val_metadata(opt.dataset_dir,
-                                                        opt.validation_cities,
-                                                        opt.patch_size,
-                                                        opt.stride)
+    train_samples, val_samples = get_train_val_metadata(args)
     print('train samples : ', len(train_samples))
     print('val samples : ', len(val_samples))
 
 
-    full_load = full_onera_loader(opt.dataset_dir, opt)
+    full_load = full_onera_loader(args)
 
-    train_dataset = OneraPreloader(opt.dataset_dir,
-                                   train_samples,
-                                   full_load,
-                                   opt.patch_size,
-                                   opt.augmentation)
-    val_dataset = OneraPreloader(opt.dataset_dir,
-                                 val_samples,
-                                 full_load,
-                                 opt.patch_size,
-                                 False)
+    train_dataset = OneraPreloader(train_samples,
+                                   full_load, True, args)
+    val_dataset = OneraPreloader(val_samples,
+                                 full_load, False, args)
 
 
     train_loader = data.DataLoader(train_dataset,
-                                   batch_size=opt.batch_size,
+                                   batch_size=args.batch_size,
                                    shuffle=True,
-                                   num_workers=opt.num_workers)
+                                   num_workers=args.num_workers)
     val_loader = data.DataLoader(val_dataset,
-                                 batch_size=opt.batch_size,
+                                 batch_size=args.batch_size,
                                  shuffle=False,
-                                 num_workers=opt.num_workers)
+                                 num_workers=args.num_workers)
     return train_loader, val_loader

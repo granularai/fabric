@@ -40,7 +40,6 @@ Set up environment: define paths, download data, and set device
 """
 
 train_loader, val_loader = get_dataloaders(args)
-print (len(train_loader))
 
 """
 Load Model then define other aspects of the model
