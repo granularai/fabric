@@ -32,7 +32,7 @@
 "gpu": 0,
 
 "stretch_8bit": {"lower":2, "higher":98},
-"stride": 10,
+"stride": 90,
 "train_thres": 5,
 "augmentation": true,
 
