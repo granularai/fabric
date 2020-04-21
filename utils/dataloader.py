@@ -68,8 +68,8 @@ def get_train_val_metadata(args):
     val_metadata = []
     for city in args.validation_cities:
         city_label = cv2.imread(args.dataset_dir + 'labels/' + city + '/cm/cm.png', 0) / 255
-        for i in range(0, city_label.shape[0], args.stride):
-            for j in range(0, city_label.shape[1], args.stride):
+        for i in range(0, city_label.shape[0], args.input_shape[2]):
+            for j in range(0, city_label.shape[1], args.input_shape[2]):
                 if ((i + args.input_shape[2]) <= city_label.shape[0] and
                         (j + args.input_shape[2]) <= city_label.shape[1]):
                     val_metadata.append([city, i, j])
