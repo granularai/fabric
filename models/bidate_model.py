@@ -20,8 +20,8 @@ class BiDateNet(nn.Module):
         self.outc = outconv(64, n_classes)
 
     def forward(self, x):
-        x_d1 = x[:, 0, :]
-        x_d2 = x[:, 1, :]
+        x_d1 = x[:, 0, :, :, :]
+        x_d2 = x[:, 1, :, :, :]
         x1_d1 = self.inc(x_d1)
         x2_d1 = self.down1(x1_d1)
         x3_d1 = self.down2(x2_d1)
