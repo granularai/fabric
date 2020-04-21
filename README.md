@@ -3,6 +3,7 @@
 This is the github repository containing the code for the paper ["Detecting Urban Changes with Recurrent Neural Networks from Multitemporal Sentinel-2 Data"](https://sagarverma.github.io/others/CD_IGARSS_2019.pdf) by Maria Papadomanolaki, Sagar Verma, Maria Vakalopoulou, Siddharth Gupta, Konstantinos Karantzalos.
 
 MultiDate-LSTM code is available [here](https://github.com/mpapadomanolaki/UNetLSTM.git).
+Use igarss2019 branch of this repository to reproduce our IGARSS 2019 paper.
 
 ## Requirements
 The code has been tested on:
