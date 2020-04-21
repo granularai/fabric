@@ -12,7 +12,7 @@ import torch.autograd as autograd
 from polyaxon_client.tracking import Experiment
 
 from basecamp.metrics.metrics import Metrics
-from basecamp.metrics.loss import DiceLoss
+from basecamp.loss import get_loss
 from basecamp.runner.runner import Runner
 
 from models.bidate_model import BiDateNet
@@ -47,7 +47,7 @@ Load Model then define other aspects of the model
 logging.info('LOADING Model')
 model = BiDateNet(n_channels=len(args.band_ids), n_classes=1).cuda(args.gpu)
 
-criterion = DiceLoss()
+criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
 # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-2)
 

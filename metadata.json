@@ -32,7 +32,7 @@
 "gpu": 0,
 
 "stretch_8bit": {"lower":2, "higher":98},
-"stride": 90,
+"stride": 10,
 "train_thres": 5,
 "augmentation": true,
 
@@ -42,10 +42,10 @@
 "epochs": 100,
 "batch_size": 32,
 "lr": 0.1,
-"loss_function": "tversky",
+"loss": "dice",
 "tversky_alpha": 0.1,
 "tversky_beta": 0.9,
-"metrics": ["dc", "jc", "prec", "recall"],
+"metrics": ["dc", "prec", "recall"],
 
 "project_name": "ChangeDetection",
 "dataset_name": "onera_w_mask.tar.gz",
