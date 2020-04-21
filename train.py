@@ -19,12 +19,14 @@ from models.bidate_model import BiDateNet
 from utils.dataloader import get_dataloaders
 from basecamp.grain.grain import Grain
 
+
 def local_testing():
     if 'POLYAXON_NO_OP' in os.environ:
         if os.environ['POLYAXON_NO_OP'] == 'true':
             return True
     else:
         False
+
 
 experiment = None
 if not local_testing():
@@ -52,10 +54,10 @@ optimizer = optim.SGD(model.parameters(), lr=args.lr)
 # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-2)
 
 
-runner = Runner(model=model,
-            optimizer=optimizer, criterion=criterion,
-            train_loader=train_loader, val_loader=val_loader,
-            args=args, polyaxon_exp=experiment)
+runner = Runner(model=model, optimizer=optimizer,
+                criterion=criterion, train_loader=train_loader,
+                val_loader=val_loader, args=args,
+                polyaxon_exp=experiment)
 
 
 logging.info('STARTING training')
@@ -67,8 +69,8 @@ for epoch in range(args.epochs):
     runner.set_epoch_metrics()
     train_metrics = runner.train_model()
     eval_metrics = runner.eval_model()
-    print (train_metrics)
-    print (eval_metrics)
+    print(train_metrics)
+    print(eval_metrics)
     """
     Store the weights of good epochs based on validation results
     """
