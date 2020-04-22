@@ -4,7 +4,8 @@ version: 1
 kind: experiment
 
 build:
-  dockerfile: Dockerfile
+  image: gcr.io/granular-ai/basecamp:latest
+  nocache: true
 
 run:
   cmd: python train.py
@@ -13,10 +14,10 @@ framework: pytorch
 environment:
   resources:
     gpu:
-      requests: 1
-      limits: 1
+      requests: 0
+      limits: 0
   node_selector:
-    polyaxon: p4-tiny
+    polyaxon: cpu-test-pool
 
   persistence:
     data: ['data']
