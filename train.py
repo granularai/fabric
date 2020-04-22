@@ -1,6 +1,8 @@
 import os
 import logging
 import json
+import tarfile
+import shutil
 
 import numpy as np
 
@@ -40,6 +42,14 @@ logging.basicConfig(level=logging.INFO)
 """
 Set up environment: define paths, download data, and set device
 """
+
+if not local_testing():
+    if not os.path.exists(args.polyaxon_data_path):
+        os.makedirs(args.polyaxon_data_path)
+    shutil.copyfile(args.nfs_data_path, args.polyaxon_data_path)
+    tf = tarfile.open(args.polyaxon_data_path)
+    tf.extractall()
+    args.dataset_dir = args.polyaxon_data_path
 
 train_loader, val_loader = get_dataloaders(args)
 
