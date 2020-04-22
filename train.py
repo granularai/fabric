@@ -59,6 +59,7 @@ runner = Runner(model=model, optimizer=optimizer,
                 val_loader=val_loader, args=args,
                 polyaxon_exp=experiment)
 
+best_dc = -1
 
 logging.info('STARTING training')
 for epoch in range(args.epochs):
@@ -71,11 +72,17 @@ for epoch in range(args.epochs):
     eval_metrics = runner.eval_model()
     print(train_metrics)
     print(eval_metrics)
+
     """
     Store the weights of good epochs based on validation results
     """
-    torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
-    upload_file_path = '/tmp/checkpoint_epoch_'+str(epoch)+'.pt'
+    if eval_metrics['dc'] > best_dc:
+        if not local_testing():
+            torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
+            upload_file_path = '/tmp/checkpoint_epoch_'+str(epoch)+'.pt'
+            experiment.outputs_store.upload_file(upload_file_path)
+        else:
+            torch.save(model, os.path.join(args.weight_dir,
+                       'checkpoint_epoch_'+str(epoch)+'.pt'))
 
-    if not local_testing():
-        experiment.outputs_store.upload_file(upload_file_path)
+        best_dc = eval_metrics['dc']
