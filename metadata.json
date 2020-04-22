@@ -32,7 +32,7 @@
 "gpu": 0,
 
 "stretch_8bit": {"lower":2, "higher":98},
-"stride": 16,
+"stride": 8,
 "train_thres": 25,
 "augmentation": true,
 
@@ -40,7 +40,7 @@
 "num_workers": 8,
 
 "epochs": 100,
-"batch_size": 128,
+"batch_size": 256,
 "lr": 0.1,
 "loss": "tversky",
 "alpha": 0.1,
