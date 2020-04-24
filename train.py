@@ -89,9 +89,9 @@ for epoch in range(args.epochs):
     if eval_metrics['val_dc'] > best_dc:
         if not local_testing():
             base = os.environ.get('POLYAXON_RUN_OUTPUTS_PATH')
-            # save_path = os.path.join(base,
-            #                          'checkpoint_epoch_' + str(epoch) + '.pt')
-            # torch.save(model, save_path)
+            save_path = os.path.join(base,
+                                     'checkpoint_epoch_' + str(epoch) + '.pt')
+            torch.save(model, save_path)
             experiment.log_artifact(save_path)
         else:
             if not os.path.exists(args.weight_dir):
