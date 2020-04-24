@@ -5,7 +5,6 @@ kind: experiment
 
 build:
   image: gcr.io/granular-ai/basecamp:latest
-  nocache: true
 
 run:
   cmd: python train.py

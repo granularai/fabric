@@ -46,10 +46,10 @@ Set up environment: define paths, download data, and set device
 if not local_testing():
     if not os.path.exists(args.polyaxon_data_path):
         os.makedirs(args.polyaxon_data_path)
-    shutil.copyfile(args.nfs_data_path, args.polyaxon_data_path)
-    tf = tarfile.open(args.polyaxon_data_path)
-    tf.extractall()
-    args.dataset_dir = args.polyaxon_data_path
+    tf = tarfile.open(args.nfs_data_path)
+    tf.extractall(args.polyaxon_data_path)
+    args.dataset_dir = os.path.join(args.polyaxon_data_path,
+                                    'change_detection/')
 
 train_loader, val_loader = get_dataloaders(args)
 
@@ -88,9 +88,11 @@ for epoch in range(args.epochs):
     """
     if eval_metrics['val_dc'] > best_dc:
         if not local_testing():
-            torch.save(model, '/tmp/checkpoint_epoch_'+str(epoch)+'.pt')
-            upload_file_path = '/tmp/checkpoint_epoch_'+str(epoch)+'.pt'
-            experiment.outputs_store.upload_file(upload_file_path)
+            base = os.environ.get('POLYAXON_RUN_OUTPUTS_PATH')
+            # save_path = os.path.join(base,
+            #                          'checkpoint_epoch_' + str(epoch) + '.pt')
+            # torch.save(model, save_path)
+            experiment.log_artifact(save_path)
         else:
             if not os.path.exists(args.weight_dir):
                 os.makedirs(args.weight_dir)

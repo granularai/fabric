@@ -119,9 +119,9 @@ def get_train_val_metadata(args):
         Tuple of train and validation samples.
 
     """
-    cities = [i for i in os.listdir(args.dataset_dir + 'labels/') if not
-              i.startswith('.') and
-              os.path.isdir(args.dataset_dir + 'labels/'+i)]
+    cities = [i for i in os.listdir(os.path.join(args.dataset_dir, 'labels/'))
+              if not i.startswith('.') and
+              os.path.isdir(os.path.join(args.dataset_dir, 'labels', i))]
     cities.sort()
     training_cities = list(set(cities).difference(set(args.validation_cities)))
 
@@ -134,8 +134,8 @@ def get_train_val_metadata(args):
     s = args.stride
 
     for city in training_cities:
-        city_label = cv2.imread(args.dataset_dir + 'labels/' +
-                                city + '/cm/cm.png', 0) / 255
+        city_label = cv2.imread(os.path.join(args.dataset_dir, 'labels',
+                                city, 'cm', 'cm.png'), 0) / 255
 
         for i in range(0, city_label.shape[0], s):
             for j in range(0, city_label.shape[1], s):
@@ -146,8 +146,8 @@ def get_train_val_metadata(args):
 
     val_metadata = []
     for city in args.validation_cities:
-        city_label = cv2.imread(args.dataset_dir + 'labels/' +
-                                city + '/cm/cm.png', 0) / 255
+        city_label = cv2.imread(os.path.join(args.dataset_dir, 'labels',
+                                city, 'cm', 'cm.png'), 0) / 255
         for i in range(0, city_label.shape[0], w):
             for j in range(0, city_label.shape[1], w):
                 if ((i + w) <= city_label.shape[0] and
@@ -171,7 +171,7 @@ def label_loader(label_path):
         Binarized change mask.
 
     """
-    label = cv2.imread(label_path + '/cm/' + 'cm.png', 0) / 255
+    label = cv2.imread(os.path.join(label_path, 'cm', 'cm.png'), 0) / 255
     return label
 
 
@@ -233,13 +233,13 @@ def full_onera_loader(args):
         Full dataset.
 
     """
-    cities = [i for i in os.listdir(args.dataset_dir + 'labels/') if not
-              i.startswith('.') and
-              os.path.isdir(args.dataset_dir + 'labels/'+i)]
+    cities = [i for i in os.listdir(os.path.join(args.dataset_dir, 'labels'))
+              if not i.startswith('.') and
+              os.path.isdir(os.path.join(args.dataset_dir, 'labels', i))]
 
     label_paths = []
     for city in cities:
-        label_paths.append(args.dataset_dir + 'labels/' + city)
+        label_paths.append(os.path.join(args.dataset_dir, 'labels', city))
 
     pool = Pool(min(len(label_paths), args.num_workers))
     city_labels = pool.map(label_loader, label_paths)
@@ -247,7 +247,7 @@ def full_onera_loader(args):
     city_paths_meta = []
     i = 0
     for city in cities:
-        city_paths_meta.append([args.dataset_dir + 'images/' + city,
+        city_paths_meta.append([os.path.join(args.dataset_dir, 'images', city),
                                 city_labels[i].shape[1],
                                 city_labels[i].shape[0], args])
         i += 1
