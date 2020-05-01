@@ -49,10 +49,12 @@
 
 "project_name": "ChangeDetection",
 "dataset_name": "onera_w_mask.tar.gz",
-"validation_cities": ["cupertino","rennes"],
-"dataset_dir": "../../datasets/change_detection/",
+"validation_cities": ["brasilia", "dubai", "milano", "norcia",
+                      "rio", "valencia", "chongqing", "lasvegas",
+                      "montpellier", "saclay_w"],
+"dataset_dir": "../../datasets/onera/",
 "weight_dir": "../../weights/onera/",
 "nfs_data_path": "/data/change_detection.tar",
 "polyaxon_data_path": "./",
-"_comment": "#Training cities, select validation cities from this to include cities into validation set \\ #0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, \\ #5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai, 9:nantes, \\ #10:paris, 11:pisa, 12:rennes, 14:saclay_e \\ \\ #loss function to select loss functions, availables \\ #1. Binary cross entropy (bce) \\ #2. Focal loss (focal) \\ #3. Dice loss (dice) \\ #4. Jaccard loss (jaccard) \\ #5. Tversky loss (tversky) \\ \\ #tversky_alpha is alpha paramter of tversky loss, use it if tversky loss is selected \\ #tversky_beta is beta parameter of tversky loss, use it if tversky loss is selected \\ \\ #focal_gamma is the gamma parameter of focal loss, use it if focal loss is selected \\ \\ #When augmentation is set true, the training process will augment the data by doing horizontal and vertical flip and 0,90,180,270,360 degree rotations. \\ \\ #Stretch_8bit param is requried for logging of images to comet. \\ \\ #Precompute band-wise means and standard deviations for your dataset and set it here. \\ \\ #dataset_name is the file name of dataset stored in gcs gs://granular-ai/data location."
+"_comment": "#Training cities, select validation cities from this to include cities into validation set \\ #0:abudhabi, 1:aguasclaras, 2:beihai, 3:beirut, 4:bercy, \\ #5:bordeaux, 6:cupertino, 7:hongkong, 8:mumbai, 9:nantes, \\ #10:paris, 11:pisa, 12:rennes, 14:saclay_e \\ \\ #loss function to select loss functions, availables \\ #1. Binary cross entropy (bce) \\ #2. Focal loss (focal) \\ #3. Dice loss (dice) \\ #4. Jaccard loss (jaccard) \\ #5. Tversky loss (tversky) \\ \\ #tversky_alpha is alpha paramter of tversky loss, use it if tversky loss is selected \\ #tversky_beta is beta parameter of tversky loss, use it if tversky loss is selected \\ \\ #focal_gamma is the gamma parameter of focal loss, use it if focal loss is selected \\ \\ #When augmentation is set true, the training process will augment the data by doing horizontal and vertical flip and 0,90,180,270,360 degree rotations. \\ \\ #Stretch_8bit param is requried for logging of images to comet. \\ \\ #Precompute band-wise means and standard deviations for your dataset and set it here. \\ \\ #dataset_name is the file name of dataset stored in gcs gs://granular-ai/data location. \\ \\ Original test set: brasilia, dubai, milano, norcia, rio, valencia, chongqing, lasvegas, montpellier, saclay_w."
 }
