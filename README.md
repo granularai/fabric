@@ -19,7 +19,9 @@ The code has been tested on:
 ## Multidate Sentinel-2 dataset
 
 1. [OSCD](https://rcdaudt.github.io/oscd/)
-2. [OSCD + Our Dates](https://drive.google.com/file/d/1sCr1jetH5zKLf0c-vlITX0UZXsQVQaeY/view?usp=sharing) [Will be cleaned soon]
+2. [OSCD + Our Dates](https://drive.google.com/file/d/1sCr1jetH5zKLf0c-vlITX0UZXsQVQaeY/view?usp=sharing)
+3. [Pretrained weight for Bi-Date Siamese Model](https://drive.google.com/file/d/1z4-NIKY0ICnn2KmaMUVwll41A9kz8bVX/view?usp=sharing)
+
 
 ## Contact
 For any queries, please contact
