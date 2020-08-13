@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.autograd as autograd
 
-from polyaxon_client.tracking import Experiment
+from polyaxon.tracking import Run
 
 from basecamp.metrics.metrics import Metrics
 from basecamp.loss import get_loss
@@ -32,7 +32,7 @@ def local_testing():
 
 experiment = None
 if not local_testing():
-    experiment = Experiment()
+    experiment = Run()
 
 grain_exp = Grain(polyaxon_exp=experiment)
 args = grain_exp.parse_args_from_json('metadata.json')
