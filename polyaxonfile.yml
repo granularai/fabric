@@ -6,6 +6,13 @@ name: fabric
 
 run:
   kind: job
+  init:
+    - git:
+        url: 'https://github.com/granularai/fabric'
+  connections: [dataset]
   container:
     image: gcr.io/granular-ai/basecamp:latest
-    command: python train.py
+    command:
+      - python
+      - train.py
+
