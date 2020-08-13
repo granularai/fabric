@@ -4,7 +4,7 @@ version: 1
 kind: experiment
 
 build:
-  dockerfile: Dockerfile
+  image: gcr.io/granular-ai/basecamp:latest
 
 run:
   cmd: python train.py
@@ -16,7 +16,7 @@ environment:
       requests: 1
       limits: 1
   node_selector:
-    polyaxon: p4-tiny
+    polyaxon: p4-train-pool
 
   persistence:
     data: ['data']

@@ -2,7 +2,6 @@ import logging
 from polyaxon_client.tracking import get_data_paths
 from polystores.stores.manager import StoreManager
 import time
-import tarfile
 
 
 import torch
@@ -256,33 +255,6 @@ def get_loaders(opt):
                                              shuffle=False,
                                              num_workers=opt.num_workers)
     return train_loader, val_loader
-
-
-def download_dataset(target_dataset, comet):
-    """download and extract the dataset from GCS
-
-    Parameters
-    ----------
-    target_dataset : string
-        `target_dataset` is the file name at the base of attached cloud storage
-         eg (GCS: /data)
-
-    """
-    data_paths = list(get_data_paths().values())[0]
-    data_store = StoreManager(path=data_paths)
-
-    logging.info('STARTING tar download')
-    comet.log_dataset_info(name=target_dataset, version=None, path=data_paths)
-    start = time.time()
-    data_store.download_file(target_dataset)
-    end = time.time()
-    logging.info('DOWNLOAD time taken: ' + str(end - start))
-    comet.log_dataset_hash(target_dataset)
-    if target_dataset.endswith('.tar.gz'):
-        logging.info('STARTING untarring')
-        tf = tarfile.open(target_dataset)
-        tf.extractall()
-        logging.info('COMPLETING untarring')
 
 
 def get_criterion(opt):
