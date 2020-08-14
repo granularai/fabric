@@ -34,7 +34,9 @@ experiment = None
 if not local_testing():
     experiment = Run()
 
-print (os.listdir('.'))
+print (os.listdir('/'))
+print (os.listdir('/plx-context'))
+print (os.listdir('/plx-context/artifacts/'))
 grain_exp = Grain(polyaxon_exp=experiment)
 args = grain_exp.parse_args_from_json('metadata.json')
 
