@@ -34,10 +34,15 @@ experiment = None
 if not local_testing():
     experiment = Run()
 
+### diagnose issue
+
 import glob
 
-for filename in glob.iglob('/' + '**/**', recursive=True):
+print(os.listdir('/'))
+for filename in glob.iglob('/plx-context' + '**/**', recursive=True):
     print(filename)
+
+###
 
 grain_exp = Grain(polyaxon_exp=experiment)
 args = grain_exp.parse_args_from_json('metadata.json')
