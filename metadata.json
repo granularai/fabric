@@ -45,7 +45,7 @@
   "num_workers": 3,
 
   "epochs": 100,
-  "batch_size": 32,
+  "batch_size": 128,
   "lr": 0.1,
   "loss": "tversky",
   "alpha": 0.1,

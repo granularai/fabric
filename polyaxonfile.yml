@@ -21,4 +21,7 @@ run:
       - train.py
     name: fabric
     workingDir: '{{ globals.artifacts_path }}/fabric'
+    resources:
+      limits:
+        nvidia.com/gpu: "1"
 
