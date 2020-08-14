@@ -4,6 +4,7 @@ import json
 import tarfile
 import shutil
 
+import glob
 import numpy as np
 
 import torch
@@ -34,9 +35,17 @@ experiment = None
 if not local_testing():
     experiment = Run()
 
+
+grain_exp = Grain(polyaxon_exp=experiment)
+args = grain_exp.parse_args_from_json('metadata.json')
+
+logging.basicConfig(level=logging.INFO)
+
 ### diagnose issue
 
-import glob
+model = BiDateNet(n_channels=len(args.band_ids), n_classes=1)
+
+torch.save(model, 'checkpoint_epoch_1.pt')
 
 for filename in glob.iglob('/data' + '**/**', recursive=True):
     print(filename)
@@ -51,10 +60,6 @@ print(experiment.get_model_path())
 
 ##
 
-grain_exp = Grain(polyaxon_exp=experiment)
-args = grain_exp.parse_args_from_json('metadata.json')
-
-logging.basicConfig(level=logging.INFO)
 
 # """
 # Set up environment: define paths, download data, and set device
