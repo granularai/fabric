@@ -39,7 +39,19 @@ if not local_testing():
 import glob
 
 print(os.listdir('/'))
-for filename in glob.iglob('/plx-context' + '**/**', recursive=True):
+for filename in glob.iglob('/mnt' + '**/**', recursive=True):
+    print(filename)
+for filename in glob.iglob('/code' + '**/**', recursive=True):
+    print(filename)
+for filename in glob.iglob('/workspace' + '**/**', recursive=True):
+    print(filename)
+for filename in glob.iglob('/tmp' + '**/**', recursive=True):
+    print(filename)
+for filename in glob.iglob('/data' + '**/**', recursive=True):
+    print(filename)
+for filename in glob.iglob('/media' + '**/**', recursive=True):
+    print(filename)
+for filename in glob.iglob('/home' + '**/**', recursive=True):
     print(filename)
 
 ###
