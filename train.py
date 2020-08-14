@@ -44,10 +44,10 @@ Set up environment: define paths, download data, and set device
 """
 
 if not local_testing():
-    if not os.path.exists(args.polyaxon_data_path):
-        os.makedirs(args.polyaxon_data_path)
+    if not os.path.exists(args.local_artifacts_path):
+        os.makedirs(args.local_artifacts_path)
     tf = tarfile.open(args.nfs_data_path)
-    tf.extractall(args.polyaxon_data_path)
+    tf.extractall(args.local_artifacts_path)
     args.dataset_dir = os.path.join(args.local_artifacts_path,
                                     'onera/')
 
