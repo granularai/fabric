@@ -38,16 +38,20 @@ if not local_testing():
 
 import glob
 
-for filename in glob.iglob('/polyData' + '**/**', recursive=True):
+for filename in glob.iglob('/data' + '**/**', recursive=True):
     print(filename)
 
-###
-#
-# grain_exp = Grain(polyaxon_exp=experiment)
-# args = grain_exp.parse_args_from_json('metadata.json')
-#
-# logging.basicConfig(level=logging.INFO)
-#
+
+for filename in glob.iglob('/artifacts' + '**/**', recursive=True):
+    print(filename)
+
+##
+
+grain_exp = Grain(polyaxon_exp=experiment)
+args = grain_exp.parse_args_from_json('metadata.json')
+
+logging.basicConfig(level=logging.INFO)
+
 # """
 # Set up environment: define paths, download data, and set device
 # """
