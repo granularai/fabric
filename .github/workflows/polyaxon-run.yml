@@ -38,6 +38,7 @@ jobs:
       run: |-
         pip3 install setuptools wheel
         pip3 install -U polyaxon
+        polyaxon --help
 
     - name: tmp
       run: |-
