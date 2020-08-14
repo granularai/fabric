@@ -55,6 +55,6 @@ jobs:
         polyaxon project create --name "$REPO_NAME"
 
     - name: run
-      if: steps.create-project.outputs.status == 'failure'
+      if: ${{ steps.create-project.outputs.status == 'failure' }}
       run: |
         polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
