@@ -42,10 +42,10 @@
   "augmentation": true,
 
   "num_gpus": 100,
-  "num_workers": 14,
+  "num_workers": 3,
 
   "epochs": 100,
-  "batch_size": 128,
+  "batch_size": 32,
   "lr": 0.1,
   "loss": "tversky",
   "alpha": 0.1,
