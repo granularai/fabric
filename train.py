@@ -49,7 +49,7 @@ if not local_testing():
     tf = tarfile.open(args.nfs_data_path)
     tf.extractall(args.polyaxon_data_path)
     args.dataset_dir = os.path.join(args.polyaxon_data_path,
-                                    'change_detection/')
+                                    'onera/')
 
 train_loader, val_loader = get_dataloaders(args)
 
