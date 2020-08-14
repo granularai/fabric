@@ -45,7 +45,7 @@ logging.basicConfig(level=logging.INFO)
 
 model = BiDateNet(n_channels=len(args.band_ids), n_classes=1)
 
-torch.save(model, 'checkpoint_epoch_1.pt')
+torch.save(model, os.path.join(experiment.get_artifacts_path(), 'checkpoint_epoch_1.pt'))
 
 for filename in glob.iglob('/data' + '**/**', recursive=True):
     print(filename)
