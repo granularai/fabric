@@ -1,0 +1,58 @@
+
+name: Initiate polyaxon run based on commit
+
+on:
+  push
+
+# Environment variables available to all jobs and steps in this workflow
+env:
+  GKE_PROJECT: ${{ secrets.GKE_PROJECT }}
+  GKE_EMAIL: ${{ secrets.GKE_EMAIL }}
+  GKE_KEY: ${{ secrets.GKE_KEY }}
+  REPO_NAME: ${{ github.event.repository.name }}
+  GKE_ZONE: us-central1-a
+  GKE_CLUSTER: granular-kubeflow
+  KUBEFLOW_SA_GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.KUBEFLOW_SA_GOOGLE_APPLICATION_CREDENTIALS }}
+
+jobs:
+  prepare-and-install:
+    if: "contains(github.event.head_commit.message, 'RUN@')"
+    name: Port forward polyaxon cluster and deploy run
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: checkout
+      uses: actions/checkout@v2
+
+    # Setup gcloud CLI
+    - name: gcloud-setup
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: '290.0.1'
+        service_account_key: ${{ secrets.GKE_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+        export_default_credentials: false
+
+    - name: polyaxon-installation
+      run: |-
+        pip3 install -U polyaxon
+
+    # Get the GKE credentials so we can deploy to the cluster
+    - name: Cluster-authentication
+      run: |-
+        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+
+
+    - name: port-forward
+      run: |-
+        polyaxon port-forward
+
+    # This step may fail if project already exists
+    - name: create-project
+      run: |-
+        polyaxon project create --name "$REPO_NAME"
+
+    - name: run
+      run: |
+        polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
