@@ -6,11 +6,14 @@ name: fabric
 
 run:
   kind: job
+  environment:
+    nodeSelector:
+      polyaxon: p4-pool
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
         revision: develop
-  connections: [datasets]
+  connections: [datasets, artifacts-store]
   container:
     image: gcr.io/granular-ai/basecamp:latest
     command:
