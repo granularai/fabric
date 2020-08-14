@@ -10,7 +10,7 @@ run:
     - git:
         url: "https://github.com/granularai/fabric"
         revision: feature/test_branch
-  connections: [datasets]
+  connections: [artifacts-store, datasets]
   container:
     image: gcr.io/granular-ai/basecamp:latest
     command:
