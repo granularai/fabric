@@ -25,6 +25,23 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
 
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.6'
+    - name: Install dependencies
+      run: python -m pip install --upgrade pip setuptools wheel polyaxon
+
+    - name: tmp
+      run: |-
+        polyaxon --help
+    - name: tmp
+      run: |-
+        pip show polyaxon
+        echo $PATH
+      if: ${{ always() }}
+
     # # Setup gcloud CLI
     # - name: gcloud-setup
     #   uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
@@ -33,17 +50,6 @@ jobs:
     #     service_account_key: ${{ secrets.GKE_KEY }}
     #     project_id: ${{ secrets.GKE_PROJECT }}
     #     export_default_credentials: false
-
-    - name: polyaxon-installation
-      run: |-
-        pip3 install setuptools wheel
-        pip3 install -U polyaxon
-
-    - name: tmp
-      run: |-
-        pip show polyaxon
-        echo $PATH
-
     # # Get the GKE credentials so we can deploy to the cluster
     # - name: Cluster-authentication
     #   run: |-
