@@ -21,40 +21,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
     - name: checkout
       uses: actions/checkout@v2
-
 
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.6'
+
     - name: Install dependencies
       run: python -m pip install --upgrade pip setuptools wheel polyaxon
 
-    - name: tmp
-      run: |-
-        polyaxon --help
-    - name: tmp
-      run: |-
-        pip show polyaxon
-        echo $PATH
-      if: ${{ always() }}
+    - name: gcloud-setup    # Setup gcloud CLI
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: '290.0.1'
+        service_account_key: ${{ secrets.GKE_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+        export_default_credentials: false
 
-    # # Setup gcloud CLI
-    # - name: gcloud-setup
-    #   uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
-    #   with:
-    #     version: '290.0.1'
-    #     service_account_key: ${{ secrets.GKE_KEY }}
-    #     project_id: ${{ secrets.GKE_PROJECT }}
-    #     export_default_credentials: false
-    # # Get the GKE credentials so we can deploy to the cluster
-    # - name: Cluster-authentication
-    #   run: |-
-    #     gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
-    #
+    - name: Cluster-authentication    # Get the GKE credentials so we can deploy to the cluster
+      run: |-
+        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+
 
     - name: port-forward
       run: |-
