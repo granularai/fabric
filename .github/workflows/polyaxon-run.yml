@@ -47,7 +47,7 @@ jobs:
 
     - name: port-forward
       run: |-
-        polyaxon port-forward
+        polyaxon port-forward &
 
     # This step may fail if project already exists
     - name: create-project
