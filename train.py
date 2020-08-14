@@ -45,6 +45,10 @@ for filename in glob.iglob('/data' + '**/**', recursive=True):
 for filename in glob.iglob('/artifacts' + '**/**', recursive=True):
     print(filename)
 
+print(experiment.get_outputs_path())
+print(experiment.get_artifacts_path())
+print(experiment.get_model_path())
+
 ##
 
 grain_exp = Grain(polyaxon_exp=experiment)
