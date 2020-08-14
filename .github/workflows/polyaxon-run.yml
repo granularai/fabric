@@ -37,7 +37,12 @@ jobs:
     - name: polyaxon-installation
       run: |-
         pip3 install setuptools
-        pip3 install polyaxon
+        pip3 install -U polyaxon
+
+    - name: tmp-find-polyaxon
+      run: |-
+        ls /bin/
+        ls .
 
     # Get the GKE credentials so we can deploy to the cluster
     - name: Cluster-authentication
@@ -47,13 +52,14 @@ jobs:
 
     - name: port-forward
       run: |-
-        polyaxon port-forward
+        /bin/polyaxon port-forward
 
     # This step may fail if project already exists
     - name: create-project
       run: |-
-        polyaxon project create --name "$REPO_NAME"
+        /bin/polyaxon project create --name "$REPO_NAME"
 
     - name: run
+      if: steps.create-project.outputs.status == 'failure'
       run: |
-        polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
+        /bin/polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
