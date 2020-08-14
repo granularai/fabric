@@ -36,7 +36,8 @@ jobs:
 
     - name: polyaxon-installation
       run: |-
-        pip3 install polyaxon 
+        pip3 install setuptools
+        pip3 install polyaxon
 
     # Get the GKE credentials so we can deploy to the cluster
     - name: Cluster-authentication
