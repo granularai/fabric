@@ -38,11 +38,11 @@ jobs:
       run: |-
         pip3 install setuptools wheel
         pip3 install -U polyaxon
-        polyaxon --help
 
     - name: tmp
       run: |-
-        polyaxon --help
+        pip show polyaxon
+        echo $PATH
 
     # # Get the GKE credentials so we can deploy to the cluster
     # - name: Cluster-authentication
