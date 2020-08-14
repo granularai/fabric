@@ -25,29 +25,29 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
 
-    # Setup gcloud CLI
-    - name: gcloud-setup
-      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
-      with:
-        version: '290.0.1'
-        service_account_key: ${{ secrets.GKE_KEY }}
-        project_id: ${{ secrets.GKE_PROJECT }}
-        export_default_credentials: false
+    # # Setup gcloud CLI
+    # - name: gcloud-setup
+    #   uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+    #   with:
+    #     version: '290.0.1'
+    #     service_account_key: ${{ secrets.GKE_KEY }}
+    #     project_id: ${{ secrets.GKE_PROJECT }}
+    #     export_default_credentials: false
 
     - name: polyaxon-installation
       run: |-
         pip3 install setuptools wheel
         pip3 install -U polyaxon
 
-    - name: tmp-find-polyaxon
+    - name: tmp
       run: |-
-        which polyaxon
+        polyaxon --help
 
-    # Get the GKE credentials so we can deploy to the cluster
-    - name: Cluster-authentication
-      run: |-
-        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
-
+    # # Get the GKE credentials so we can deploy to the cluster
+    # - name: Cluster-authentication
+    #   run: |-
+    #     gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+    #
 
     - name: port-forward
       run: |-
