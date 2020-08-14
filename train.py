@@ -91,6 +91,7 @@ for epoch in range(args.epochs):
             save_path = os.path.join(args.local_artifacts_path,
                                      'checkpoint_epoch_' + str(epoch) + '.pt')
             torch.save(model, save_path)
+            print (save_path)
             experiment.log_artifact(save_path)
         else:
             if not os.path.exists(args.weight_dir):
