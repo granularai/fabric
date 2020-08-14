@@ -7,6 +7,8 @@ logs
 data
 weights
 
+*.__pycache__
+
 *.py[cod]
 
 # C extensions
