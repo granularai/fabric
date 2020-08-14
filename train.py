@@ -34,6 +34,7 @@ experiment = None
 if not local_testing():
     experiment = Run()
 
+os.listdir('.')
 grain_exp = Grain(polyaxon_exp=experiment)
 args = grain_exp.parse_args_from_json('metadata.json')
 
