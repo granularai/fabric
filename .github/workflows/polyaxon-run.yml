@@ -41,7 +41,7 @@ jobs:
 
     - name: tmp-find-polyaxon
       run: |-
-        whereis polyaxon
+        which polyaxon
 
     # Get the GKE credentials so we can deploy to the cluster
     - name: Cluster-authentication
@@ -51,14 +51,14 @@ jobs:
 
     - name: port-forward
       run: |-
-        /bin/polyaxon port-forward
+        polyaxon port-forward
 
     # This step may fail if project already exists
     - name: create-project
       run: |-
-        /bin/polyaxon project create --name "$REPO_NAME"
+        polyaxon project create --name "$REPO_NAME"
 
     - name: run
       if: steps.create-project.outputs.status == 'failure'
       run: |
-        /bin/polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
+        polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
