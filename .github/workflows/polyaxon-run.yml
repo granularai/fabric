@@ -36,7 +36,7 @@ jobs:
 
     - name: polyaxon-installation
       run: |-
-        pip3 install setuptools
+        pip3 install setuptools wheel
         pip3 install -U polyaxon
 
     - name: tmp-find-polyaxon
