@@ -87,17 +87,16 @@ for epoch in range(args.epochs):
     Store the weights of good epochs based on validation results
     """
     if eval_metrics['val_dc'] > best_dc:
+        cpt_name =
         if not local_testing():
-            save_path = os.path.join(args.local_artifacts_path,
-                                     'checkpoint_epoch_' + str(epoch) + '.pt')
+            cpt_name = 'checkpoint_epoch_' + str(epoch) + '.pt'
+            save_path = os.path.join(args.local_artifacts_path, cpt_name)
             torch.save(model, save_path)
-            print (save_path)
-            experiment.log_artifact(path=save_path)
+            experiment.log_artifact(save_path, name=cpt_name)
         else:
             if not os.path.exists(args.weight_dir):
                 os.makedirs(args.weight_dir)
 
-            torch.save(model, os.path.join(args.weight_dir,
-                       'checkpoint_epoch_'+str(epoch)+'.pt'))
+            torch.save(model, os.path.join(args.weight_dir, cpt_name))
 
         best_dc = eval_metrics['val_dc']
