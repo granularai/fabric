@@ -42,7 +42,7 @@ jobs:
     - name: tmp-find-polyaxon
       run: |-
         ls /bin/
-        ls .
+        ls ./
 
     # Get the GKE credentials so we can deploy to the cluster
     - name: Cluster-authentication
