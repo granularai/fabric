@@ -9,10 +9,13 @@ run:
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
+        revision: develop
   connections: [dataset]
   container:
     image: gcr.io/granular-ai/basecamp:latest
     command:
       - python
       - train.py
+    name: fabric
+    workingDir: '{{ globals.artifacts_path }}/fabric'
 
