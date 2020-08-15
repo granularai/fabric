@@ -50,11 +50,12 @@ jobs:
         polyaxon port-forward &
 
     # This step may fail if project already exists
-    - name: create-project
+    - name: create project
+      id: create-project
       run: |-
-        polyaxon project create --name "$REPO_NAME"
+        polyaxon project create --name "$REPO_NAME" || true
 
     - name: run
-      if: ${{ steps.create-project.outputs.status == 'failure' }}
+      if: ${{ steps.create-project.outputs.status == 'failure' || steps.create-project.outputs.status == 'success'  }}
       run: |
         polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
