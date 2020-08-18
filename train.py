@@ -52,12 +52,11 @@ if not local_testing():
                                     'onera/')
 
     # log code as an artifact
-
-    with tarfile.open(os.path.join(args.local_artifacts_path, 'code.tar.gz')) \
+    tar_path = os.path.join(args.local_artifacts_path, 'code.tar.gz')
+    with tarfile.open(tar_path, "w.gz") \
             as tar:
-        print (os.listdir('.'))
         tar.add('.', arcname='code')
-        experiment.log_artifact('code.tar.gz', name='code')
+        experiment.log_artifact(tar_path, name='code')
 
 train_loader, val_loader = get_dataloaders(args)
 
