@@ -56,6 +56,8 @@ if not local_testing():
     # for name in glob.glob('*'):
     print (experiment.get_outputs_path())
     print (experiment.get_artifacts_path())
+    print (experiment.get_model_path())
+    
 
 train_loader, val_loader = get_dataloaders(args)
 
