@@ -56,7 +56,7 @@ if not local_testing():
     with tarfile.open(tar_path, "w:gz") \
             as tar:
         tar.add('.', arcname='code')
-        experiment.log_artifact(tar_path, name='code')
+        experiment.log_artifact(tar_path, name='code.tar')
 
 train_loader, val_loader = get_dataloaders(args)
 
