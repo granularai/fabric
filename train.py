@@ -58,7 +58,7 @@ if not local_testing():
             as tar:
         for name in glob.glob('*'):
             tar.add(name)
-    experiment.log_artifact(tar_path, name='code.tar.gz')
+    experiment.log_artifact(tar_path, name='code.tar')
 
 train_loader, val_loader = get_dataloaders(args)
 
