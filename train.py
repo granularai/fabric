@@ -53,7 +53,7 @@ if not local_testing():
 
     # log code as an artifact
     tar_path = os.path.join(args.local_artifacts_path, 'code.tar.gz')
-    with tarfile.open(tar_path, "w.gz") \
+    with tarfile.open(tar_path, "w:gz") \
             as tar:
         tar.add('.', arcname='code')
         experiment.log_artifact(tar_path, name='code')
