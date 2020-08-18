@@ -53,8 +53,7 @@ if not local_testing():
                                     'onera/')
 
     # log code to artifact folder
-    code_path = os.path.join(experiment.get_outputs_path(), 'code')
-    os.makedirs(code_path)
+    code_path = os.path.join(experiment.get_artifacts_path(), 'code')
     copytree('.', code_path, ignore=ignore_patterns('.*'))
 
 
