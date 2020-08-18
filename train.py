@@ -95,10 +95,9 @@ for epoch in range(args.epochs):
     if eval_metrics['val_dc'] > best_dc:
         cpt_name = 'checkpoint_epoch_' + str(epoch) + '.pt'
         if not local_testing():
-            save_path = os.path.join(args.local_artifacts_path, cpt_name)
-            torch.save(model.state_dict(), save_path)
-            experiment.log_model(save_path, step=epoch,
-                                 timestamp=dt.datetime.now())
+            weight_path = os.path.join(experiment.get_artifacts_path(),
+                                       'weights')
+            torch.save(model.state_dict(), weight_path)
         else:
             if not os.path.exists(args.weight_dir):
                 os.makedirs(args.weight_dir)
