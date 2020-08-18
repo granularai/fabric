@@ -52,13 +52,10 @@ if not local_testing():
     args.dataset_dir = os.path.join(args.local_artifacts_path,
                                     'onera/')
 
-    # log code as an artifact
-    tar_path = os.path.join(args.local_artifacts_path, 'code.tar.gz')
-    with tarfile.open(tar_path, "w:gz") \
-            as tar:
-        for name in glob.glob('*'):
-            tar.add(name)
-    experiment.log_artifact(tar_path, name='code.tar')
+    # log code to artifact folder
+    # for name in glob.glob('*'):
+    print (experiment.get_outputs_path())
+    print (experiment.get_artifacts_path())
 
 train_loader, val_loader = get_dataloaders(args)
 
