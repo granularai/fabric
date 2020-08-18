@@ -1,9 +1,9 @@
 import os
-import glob
 import logging
 import json
 import tarfile
-import shutil
+from shutil import copytree, ignore_patterns
+import datetime as dt
 
 import numpy as np
 
@@ -53,11 +53,10 @@ if not local_testing():
                                     'onera/')
 
     # log code to artifact folder
-    # for name in glob.glob('*'):
-    print (experiment.get_outputs_path())
-    print (experiment.get_artifacts_path())
-    print (experiment.get_model_path())
-    
+    code_path = os.path.join(experiment.get_outputs_path, 'code')
+    os.makedirs(code_path)
+    copytree('.', code_path, ignore=ignore_patterns('.*'))
+
 
 train_loader, val_loader = get_dataloaders(args)
 
@@ -95,16 +94,17 @@ for epoch in range(args.epochs):
     Store the weights of good epochs based on validation results
     """
     if eval_metrics['val_dc'] > best_dc:
-        cpt_name = 'checkpoint_epoch_' + str(epoch)
+        cpt_name = 'checkpoint_epoch_' + str(epoch) + '.pt'
         if not local_testing():
-            save_path = os.path.join(args.local_artifacts_path,
-                                     cpt_name + '.pt')
-            torch.save(model, save_path)
-            experiment.log_artifact(save_path, name=cpt_name)
+            save_path = os.path.join(args.local_artifacts_path, cpt_name)
+            torch.save(model.state_dict(), save_path)
+            experiment.log_model(save_path, step=epoch,
+                                 timestamp=dt.datetime.now())
         else:
             if not os.path.exists(args.weight_dir):
                 os.makedirs(args.weight_dir)
 
-            torch.save(model, os.path.join(args.weight_dir, cpt_name + '.pt'))
+            torch.save(model.state_dict(),
+                       os.path.join(args.weight_dir, cpt_name + '.pt'))
 
         best_dc = eval_metrics['val_dc']
