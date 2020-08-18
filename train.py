@@ -1,4 +1,5 @@
 import os
+import glob
 import logging
 import json
 import tarfile
@@ -55,7 +56,8 @@ if not local_testing():
     tar_path = os.path.join(args.local_artifacts_path, 'code.tar.gz')
     with tarfile.open(tar_path, "w:gz") \
             as tar:
-        tar.add('.', arcname='code')
+        for name in glob.glob('*'):
+            tar.add(name)
         experiment.log_artifact(tar_path, name='code.tar')
 
 train_loader, val_loader = get_dataloaders(args)
