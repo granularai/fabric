@@ -12,7 +12,7 @@ run:
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
-        revision: feature/log_code
+        revision: feature/predict
   connections: [datasets, artifacts-store]
   container:
     image: gcr.io/granular-ai/basecamp:latest
