@@ -7,7 +7,7 @@ from models.bidate_model import BiDateNet
 # from seldon_core.user_model import SeldonComponent
 
 
-class SeldonModel:
+class PredictModel:
     def __init__(self):
         self.grain_exp = Grain()
         self.args = self.grain_exp.parse_args_from_json('metadata.json')
