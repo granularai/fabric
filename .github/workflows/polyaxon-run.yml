@@ -49,7 +49,6 @@ jobs:
         brew install yq
     - name: Update Polyaxonfile Revision
       run: |
-         yq write --inplace polyaxonfile.yml 'run.init[0].git.revision' ${{ github.ref }}
 
     - name: port-forward
       run: |-
@@ -61,7 +60,8 @@ jobs:
       run: |-
         polyaxon project create --name "$REPO_NAME" || true
 
-    - name: run
+    - name: Update polyaxon revision and run
       # if: ${{ steps.create-project.outputs.status == 'failure' || steps.create-project.outputs.status == 'success'  }}
       run: |
+        yq write --inplace polyaxonfile.yml 'run.init[0].git.revision' ${{ github.ref }}
         polyaxon run -p "$REPO_NAME" -f polyaxonfile.yml --description "${{ github.event.head_commit.message }}"
