@@ -44,10 +44,12 @@ jobs:
       run: |-
         gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
 
+    - name: install tooling
+      run: |
+        brew install yq
     - name: Update Polyaxonfile Revision
-      uses: mikefarah/yq@3.3.2
-      with:
-        cmd: yq write --inplace polyaxonfile.yml 'run.init[0].git.revision' ${{ github.ref }}
+      run: |
+         yq write --inplace polyaxonfile.yml 'run.init[0].git.revision' ${{ github.ref }}
 
     - name: port-forward
       run: |-
