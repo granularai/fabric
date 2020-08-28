@@ -65,7 +65,9 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = BiDateNet(n_channels=len(args.band_ids), n_classes=1)
+model = grain_exp.load_model(BiDateNet,
+                             n_channels=len(args.band_ids),
+                             n_classes=1)
 
 criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)

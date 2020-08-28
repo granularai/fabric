@@ -44,6 +44,10 @@ jobs:
       run: |-
         gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
 
+    - name: Update Polyaxonfile Revision
+      uses: pascal-sochacki/yq@github-action
+      with:
+        cmd: yq write --inplace polyaxonfile.yml 'run.init[0].git.revision' ${{ github.ref }}
 
     - name: port-forward
       run: |-
