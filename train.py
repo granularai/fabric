@@ -54,7 +54,7 @@ if not local_testing():
     code_path = os.path.join(experiment.get_artifacts_path(), 'code')
     copytree('.', code_path, ignore=ignore_patterns('.*'))
 
-    # set artifact/weight fodler
+    # set artifact/weight folder
     args.weight_dir = os.path.join(experiment.get_artifacts_path(), 'weights')
 
 if not os.path.exists(args.weight_dir):

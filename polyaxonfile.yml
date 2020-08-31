@@ -5,21 +5,15 @@ name: fabric
 
 run:
   kind: job
-  # environment:
-    # nodeSelector:
-    #   polyaxon: p4-pool
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
         revision: feature/log_model_xp
   connections: [datasets, artifacts-store]
   container:
-    image: gcr.io/granular-ai/basecamp:tmp
+    image: gcr.io/granular-ai/training-base:nightly
     command:
       - python
       - train.py
     name: fabric
     workingDir: '{{ globals.artifacts_path }}/fabric'
-    # resources:
-    #   limits:
-    #     nvidia.com/gpu: "1"
