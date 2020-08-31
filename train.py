@@ -20,7 +20,7 @@ from basecamp.runner.runner import Runner
 
 from models.bidate_model import BiDateNet
 from utils.dataloader import get_dataloaders
-from basecamp.grain.grain import Grain
+from basecamper.grain.grain import Grain
 
 
 def local_testing():

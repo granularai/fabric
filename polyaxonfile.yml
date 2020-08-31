@@ -13,6 +13,10 @@ run:
   container:
     image: gcr.io/granular-ai/training-base:nightly
     command:
+      - pip
+      - install -r
+      - requirements.txt
+      - &&
       - python
       - train.py
     name: fabric
