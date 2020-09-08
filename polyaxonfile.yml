@@ -12,7 +12,7 @@ run:
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
-        revision: develop
+        revision: quickstart
   connections: [datasets, artifacts-store]
   container:
     image: gcr.io/granular-ai/basecamp:latest
@@ -21,6 +21,3 @@ run:
       - train.py
     name: fabric
     workingDir: '{{ globals.artifacts_path }}/fabric'
-    resources:
-      limits:
-        nvidia.com/gpu: "1"
