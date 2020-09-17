@@ -34,17 +34,17 @@
     "B8A": 954.76957663021938
   },
   "num_classes": 2,
-  "gpu": 0,
+  "gpu": -1,
 
   "stretch_8bit": { "lower": 2, "higher": 98 },
   "stride": 48,
   "train_thres": 25,
   "augmentation": true,
 
-  "num_gpus": 1,
+  "num_gpus": 0,
   "num_workers": 3,
 
-  "epochs": 5,
+  "epochs": 2,
   "batch_size": 128,
   "lr": 0.1,
   "loss": "tversky",
