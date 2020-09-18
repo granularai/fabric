@@ -1,26 +1,17 @@
----
-version: 1
+version: 1.1
 
-kind: experiment
-
-build:
-  image: gcr.io/granular-ai/basecamp:latest
+kind: component
+name: fabric
 
 run:
-  cmd: python train.py
-
-framework: pytorch
-environment:
-  resources:
-    gpu:
-      requests: 1
-      limits: 1
-  node_selector:
-    polyaxon: p4-train-pool
-
-  persistence:
-    data: ['data']
-    outputs: 'outputs'
-
-logging:
-  level: INFO
+  kind: job
+  init:
+    - git:
+        url: 'https://github.com/granularai/fabric'
+        revision: feature/log_model_xp
+  connections: [datasets, artifacts-store]
+  container:
+    image: gcr.io/granular-ai/training-base:nightly
+    command: ['/bin/bash', 'run.sh']
+    name: fabric
+    workingDir: '{{ globals.artifacts_path }}/fabric'

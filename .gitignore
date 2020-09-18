@@ -1,3 +1,4 @@
+.DS_Store
 .ipynb_checkpoints
 *.png
 *.jpg
@@ -5,3 +6,71 @@
 logs
 data
 weights
+
+*__pycache__
+
+*.py[cod]
+
+# C extensions
+*.so
+
+# Packages
+*.egg
+*.egg-info
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Complexity
+output/*.html
+output/*/index.html
+
+# Sphinx
+docs/_build
+
+.webassets-cache
+
+# Virtualenvs
+env/
+
+# npm
+/node_modules/
+
+# webpack-built files
+/geometa/static/build/
+
+# Configuration
+*.env
+
+# Development database
+*.db
+
+# Data
+<<<<<<< HEAD
+/assets/data/
+=======
+/assets/data/
+>>>>>>> 0d280452df4a289aa415f7e12a5028f7d3aa9235
