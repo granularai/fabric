@@ -1,3 +1,4 @@
+.DS_Store
 .ipynb_checkpoints
 *.png
 *.jpg
@@ -68,4 +69,8 @@ env/
 *.db
 
 # Data
+<<<<<<< HEAD
 /assets/data/
+=======
+/assets/data/
+>>>>>>> 0d280452df4a289aa415f7e12a5028f7d3aa9235
