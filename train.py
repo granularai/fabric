@@ -72,7 +72,7 @@ model_path = os.path.relpath(getmodule(model_cls).__file__)
 model_name = model_cls.__name__
 model_signature = signature(model_cls)
 
-experiment.log_inputs(foo="bar")
+experiment.log_inputs(foo="bar", )
 
 if args.gpu > -1:
     model = model.to(args.gpu)
