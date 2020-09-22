@@ -41,7 +41,7 @@
   "train_thres": 25,
   "augmentation": true,
 
-  "num_gpus": 1,
+  "num_gpus": 0,
   "num_workers": 3,
 
   "epochs": 2,

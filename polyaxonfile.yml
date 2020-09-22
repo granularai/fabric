@@ -1,4 +1,3 @@
----
 version: 1.1
 
 kind: component
@@ -6,18 +5,13 @@ name: fabric
 
 run:
   kind: job
-  environment:
-    nodeSelector:
-      polyaxon: p4-pool
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
         revision: quickstart
   connections: [datasets, artifacts-store]
   container:
-    image: gcr.io/granular-ai/basecamp:latest
-    command:
-      - python
-      - train.py
+    image: gcr.io/granular-ai/training-base:nightly
+    command: ['/bin/bash', 'run.sh']
     name: fabric
     workingDir: '{{ globals.artifacts_path }}/fabric'
