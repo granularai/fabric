@@ -8,9 +8,9 @@ import torch.optim as optim
 
 from polyaxon.tracking import Run
 
-from basecamper.loss import get_loss
-from basecamper.runner import Runner
-from basecamper.grain import Grain
+from phobos.loss import get_loss
+from phobos.runner import Runner
+from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
 from utils.dataloader import get_dataloaders
