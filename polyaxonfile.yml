@@ -8,7 +8,7 @@ run:
   init:
     - git:
         url: 'https://github.com/granularai/fabric'
-        revision: quickstart
+        revision: test_model_load
   connections: [datasets, artifacts-store]
   container:
     image: gcr.io/granular-ai/training-base:nightly
