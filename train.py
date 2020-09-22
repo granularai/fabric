@@ -15,6 +15,8 @@ from phobos.grain import Grain
 from models.bidate_model import BiDateNet
 from utils.dataloader import get_dataloaders
 
+from inspect import getmodule, signature
+
 
 def local_testing():
     if 'POLYAXON_NO_OP' in os.environ:
@@ -35,7 +37,6 @@ logging.basicConfig(level=logging.INFO)
 """
 Set up environment: define paths, download data, and set device
 """
-
 if not local_testing():
     if not os.path.exists(args.local_artifacts_path):
         os.makedirs(args.local_artifacts_path)
@@ -62,6 +63,22 @@ model = grain_exp.load_model(BiDateNet,
                              n_channels=len(args.band_ids),
                              n_classes=1)
 print("MODEL LOADED")
+
+# manually load debug
+model_cls = BiDateNet
+model_module = getmodule(model_cls).__name__
+model_path = os.path.relpath(getmodule(model_cls).__file__)
+model_name = model_cls.__name__
+model_signature = signature(model_cls)
+
+experiment.log_inputs(
+    foo="bar",
+    model_path=model_path,
+    model_name=model_name,
+    model_module=model_module,
+    model_signature=model_signature,
+    model_args=dict(n_channels=4, n_classes=1),
+)
 
 if args.gpu > -1:
     model = model.to(args.gpu)
