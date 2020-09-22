@@ -75,13 +75,12 @@ model_signature = signature(model_cls)
 print('logging manually')
 print(
     dict(
-        model_cls=BiDateNet
-        model_module=getmodule(model_cls).__name__
-        model_path=os.path.relpath(getmodule(model_cls).__file__)
-        model_name=model_cls.__name__
-        model_signature=signature(model_cls)
-    )
-)
+        model_cls=BiDateNet,
+        model_module=getmodule(model_cls).__name__,
+        model_path=os.path.relpath(getmodule(model_cls).__file__),
+        model_name=model_cls.__name__,
+        model_signature=signature(model_cls),
+    ))
 experiment.log_inputs(
     foo="bar",
     model_path=model_path,
