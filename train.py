@@ -58,7 +58,7 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-if args.cuda > -1:
+if args.gpu > -1:
     model = model.to(args.gpu)
 
 criterion = get_loss(args)
