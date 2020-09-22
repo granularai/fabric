@@ -5,4 +5,4 @@ polyaxon==1.1.7post4
 rasterio==1.1.3
 torch==1.6.0
 torchvision==0.7.0
-basecamper==0.1.1.dev2
+phobos
