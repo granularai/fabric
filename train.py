@@ -72,7 +72,24 @@ model_path = os.path.relpath(getmodule(model_cls).__file__)
 model_name = model_cls.__name__
 model_signature = signature(model_cls)
 
-experiment.log_inputs(foo="bar", )
+print('logging manually')
+print(
+    dict(
+        model_cls=BiDateNet
+        model_module=getmodule(model_cls).__name__
+        model_path=os.path.relpath(getmodule(model_cls).__file__)
+        model_name=model_cls.__name__
+        model_signature=signature(model_cls)
+    )
+)
+experiment.log_inputs(
+    foo="bar",
+    model_path=model_path,
+    model_name=model_name,
+    model_module=model_module,
+    model_signature=model_signature,
+    model_args=dict(n_channels=4, n_classes=1),
+)
 
 if args.gpu > -1:
     model = model.to(args.gpu)
