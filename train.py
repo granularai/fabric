@@ -58,9 +58,8 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = grain_exp.load_model(BiDateNet,
-                             n_channels=len(args.band_ids),
-                             n_classes=1)
+if args.cuda > -1:
+    model = model.to(args.gpu)
 
 criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
