@@ -61,6 +61,8 @@ logging.info('LOADING Model')
 model = grain_exp.load_model(BiDateNet,
                              n_channels=len(args.band_ids),
                              n_classes=1)
+print("MODEL LOADED")
+
 if args.gpu > -1:
     model = model.to(args.gpu)
 
