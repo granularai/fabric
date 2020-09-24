@@ -37,6 +37,18 @@ logging.basicConfig(level=logging.INFO)
 """
 Set up environment: define paths, download data, and set device
 """
+
+
+def list_files(startpath):
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        print('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print('{}{}'.format(subindent, f))
+
+
 if not local_testing():
     if not os.path.exists(args.local_artifacts_path):
         os.makedirs(args.local_artifacts_path)
@@ -45,8 +57,14 @@ if not local_testing():
     args.dataset_dir = os.path.join(args.local_artifacts_path, 'onera/')
 
     # log code to artifact/code folder
+    print('local files')
+    list_files('.')
     code_path = os.path.join(experiment.get_artifacts_path(), 'code')
+    print('prev code path files')
+    list_files(code_path)
     copytree('.', code_path, ignore=ignore_patterns('.*'))
+    print('new code path files')
+    list_files(code_path)
 
     # set artifact/weight folder
     args.weight_dir = os.path.join(experiment.get_artifacts_path(), 'weights')
