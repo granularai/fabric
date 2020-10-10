@@ -61,6 +61,10 @@ logging.info('LOADING Model')
 model = grain_exp.load_model(BiDateNet,
                              n_channels=len(args.band_ids),
                              n_classes=1)
+if args.gpu > -1:
+    model = model.to(args.gpu)
+    if args.num_gpus > 1:
+        model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
 criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
