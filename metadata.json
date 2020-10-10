@@ -38,11 +38,13 @@
 
   "stretch_8bit": { "lower": 2, "higher": 98 },
   "stride": 8,
+
   "train_thres": 25,
   "augmentation": true,
 
   "num_gpus": 1,
   "num_workers": 12,
+
 
   "epochs": 100,
   "batch_size": 128,
