@@ -4,6 +4,7 @@ import tarfile
 from shutil import copytree, ignore_patterns
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 from polyaxon.tracking import Run
