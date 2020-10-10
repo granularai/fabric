@@ -34,22 +34,23 @@
     "B8A": 954.76957663021938
   },
   "num_classes": 2,
-  "gpu": -1,
+  "gpu": 0,
 
   "stretch_8bit": { "lower": 2, "higher": 98 },
-  "stride": 48,
+  "stride": 8,
+
   "train_thres": 25,
   "augmentation": true,
 
-  "num_gpus": 0,
-  "num_workers": 3,
+  "num_gpus": 1,
+  "num_workers": 12,
 
-  "epochs": 2,
+
+  "epochs": 100,
   "batch_size": 128,
-  "lr": 0.1,
-  "loss": "tversky",
-  "alpha": 0.1,
-  "beta": 0.9,
+  "lr": 0.01,
+  "loss": "binary_jaccard",
+  "jaccard_weight": 0.25,
   "metrics": ["dc", "prec", "recall"],
 
   "project_name": "ChangeDetection",

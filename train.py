@@ -4,13 +4,14 @@ import tarfile
 from shutil import copytree, ignore_patterns
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 from polyaxon.tracking import Run
 
-from basecamper.loss import get_loss
-from basecamper.runner import Runner
-from basecamper.grain import Grain
+from phobos.loss import get_loss
+from phobos.runner import Runner
+from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
 from utils.dataloader import get_dataloaders
@@ -61,6 +62,10 @@ logging.info('LOADING Model')
 model = grain_exp.load_model(BiDateNet,
                              n_channels=len(args.band_ids),
                              n_classes=1)
+if args.gpu > -1:
+    model = model.to(args.gpu)
+    if args.num_gpus > 1:
+        model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
 criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)

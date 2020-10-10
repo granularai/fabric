@@ -39,5 +39,5 @@ class BiDateNet(nn.Module):
         x = self.up3(x, torch.relu(x2_d2 * x2_d1))
         x = self.up4(x, torch.relu(x1_d2 * x1_d1))
         x = self.outc(x)
-        x = torch.sigmoid(x)
+        x = torch.sigmoid(x).squeeze(1)
         return x
