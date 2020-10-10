@@ -47,9 +47,8 @@
   "epochs": 100,
   "batch_size": 128,
   "lr": 0.1,
-  "loss": "tversky",
-  "alpha": 0.1,
-  "beta": 0.9,
+  "loss": "binary_jaccard",
+  "jaccard_weight": 0.25,
   "metrics": ["dc", "prec", "recall"],
 
   "project_name": "ChangeDetection",
