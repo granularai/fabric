@@ -75,6 +75,43 @@ def _resize(band, height, width):
     return band
 
 
+def normalize(img, mean, std, band_ids, max_pixel_value=255.0):
+    """Mean-std normalization of input image patch.
+    Parameters
+    ----------
+    img : numpy.ndarray
+        RGB image patch.
+    mean : dict
+        Mean of RGB channels.
+    std : dict
+        Standard deviation of RGB channels.
+    band_ids : list
+        Band IDs being used.
+    max_pixel_value : float
+        Max pixel value.
+    Returns
+    -------
+    type
+        Description of returned object.
+    """
+    mean = [mean[x] for x in band_ids]
+    std = [std[x] for x in band_ids]
+
+    mean = np.array(mean, dtype=np.float32)
+#     mean *= max_pixel_value
+
+    std = np.array(std, dtype=np.float32)
+#     std *= max_pixel_value
+
+    denominator = np.reciprocal(std, dtype=np.float32)
+
+    img = img.transpose()
+    img = img.astype(np.float32) / max_pixel_value
+    img -= mean
+    img *= denominator
+    return img.transpose()
+    
+
 def stretch_8bit(band, lower_percent=2, higher_percent=98):
     """Stretch 8bit a 16bit or higher bit image.
 
