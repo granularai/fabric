@@ -14,6 +14,7 @@ from phobos.runner import Runner
 from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
+from models.xdxd_sn4_bidate import XDXD_SpaceNet4_UNetVGG16
 from utils.dataloader import get_dataloaders
 
 
@@ -59,9 +60,15 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = grain_exp.load_model(BiDateNet,
-                             n_channels=len(args.band_ids),
-                             n_classes=1)
+if args.model == 'bidate_unet':
+    model = grain_exp.load_model(BiDateNet,
+                                n_channels=len(args.band_ids),
+                                n_classes=1)
+if args.model == 'xdxd_sn4':
+    model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=1)
+                                 
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
