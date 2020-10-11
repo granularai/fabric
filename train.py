@@ -68,11 +68,20 @@ if args.model == 'xdxd_sn4':
     model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
                                  n_channels=len(args.band_ids),
                                  n_classes=1)
-                                 
+
+if args.pretrained_checkpoint:
+        pretrained = torch.load(os.path.join(args.weight_dir, args.pretrained_checkpoint))
+        model.load_state_dict(pretrained)
+
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
+
+if args.resume_checkpoint:
+    weight = torch.load(os.path.join(args.weight_dir, args.resume_checkpoint))
+    model.load_state_dict(weight)
+
 
 criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
