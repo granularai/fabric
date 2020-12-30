@@ -80,6 +80,7 @@ runner = Runner(model=model,
                 polyaxon_exp=experiment)
 
 best_dc = -1
+best_metrics = None
 
 logging.info('STARTING training')
 for epoch in range(args.epochs):
@@ -100,3 +101,9 @@ for epoch in range(args.epochs):
                                 'checkpoint_epoch_' + str(epoch) + '.pt')
         torch.save(model.state_dict(), cpt_path)
         best_dc = eval_metrics['val_dc']
+
+        best_metrics = {**train_metrics, **eval_metrics}
+        polyaxon_exp.log_outputs(**best_metrics)
+
+if polyaxon_exp:
+    polyaxon_exp.log_outputs(**best_metrics)
