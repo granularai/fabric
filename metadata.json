@@ -1,6 +1,6 @@
 {
   "sensor": "sentinel2",
-  "input_shape": "2,4,48,48",
+  "input_shape": "2,4,64,64",
   "resolution": 10,
   "band_ids": ["B02", "B03", "B04", "B08"],
   "band_means": {
@@ -37,18 +37,18 @@
   "gpu": 0,
 
   "stretch_8bit": { "lower": 2, "higher": 98 },
-  "stride": 8,
+  "stride": 32,
 
   "train_thres": 25,
   "augmentation": true,
 
-  "num_gpus": 1,
-  "num_workers": 12,
+  "num_gpus": 8,
+  "num_workers": 30,
 
 
   "epochs": 100,
-  "batch_size": 128,
-  "lr": 0.01,
+  "batch_size": 1024,
+  "lr": 0.001,
   "loss": "binary_jaccard",
   "jaccard_weight": 0.25,
   "metrics": ["dc", "prec", "recall"],

@@ -7,17 +7,14 @@ run:
   kind: job
   environment:
     nodeSelector:
-      polyaxon: p4-pool
-  init:
-    - git:
-        url: 'https://github.com/granularai/fabric'
-        revision: develop
+      polyaxon: v100-pool
   connections: [datasets, artifacts-store]
   container:
     image: gcr.io/granular-ai/training-base:nightly
+    workingDir: "{{ globals.run_artifacts_path }}/uploads"
     command: ['/bin/bash', 'run.sh']
-    name: fabric
-    workingDir: '{{ globals.artifacts_path }}/fabric'
     resources:
+      requests:
+        nvidia.com/gpu: 8
       limits:
-        nvidia.com/gpu: "1"
+        nvidia.com/gpu: 8

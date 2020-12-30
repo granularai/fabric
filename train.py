@@ -45,8 +45,8 @@ if not local_testing():
     args.dataset_dir = os.path.join(args.local_artifacts_path, 'onera/')
 
     # log code to artifact/code folder
-    code_path = os.path.join(experiment.get_artifacts_path(), 'code')
-    copytree('.', code_path, ignore=ignore_patterns('.*'))
+    # code_path = os.path.join(experiment.get_artifacts_path(), 'code')
+    # copytree('.', code_path, ignore=ignore_patterns('.*'))
 
     # set artifact/weight folder
     args.weight_dir = os.path.join(experiment.get_artifacts_path(), 'weights')
