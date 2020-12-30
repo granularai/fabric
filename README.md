@@ -2,7 +2,7 @@
 
 ## Run
 ```
-polyaxon project create fabric_quickstart
+polyaxon project create --name fabric_quickstart
 polyaxon run -p fabric_quickstart
 ```
 
