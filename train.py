@@ -103,7 +103,7 @@ for epoch in range(args.epochs):
         best_dc = eval_metrics['val_dc']
 
         best_metrics = {**train_metrics, **eval_metrics}
-        polyaxon_exp.log_outputs(**best_metrics)
+        experiment.log_outputs(**best_metrics)
 
-if polyaxon_exp:
-    polyaxon_exp.log_outputs(**best_metrics)
+if experiment:
+    experiment.log_outputs(**best_metrics)
