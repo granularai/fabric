@@ -47,9 +47,9 @@
 
 
   "epochs": 100,
-  "batch_size": 512,
-  "lr": 0.01,
-  "loss": "binary_jaccard",
+  "batch_size": 256,
+  "lr": 0.1,
+  "loss": "dice",
   "jaccard_weight": 0.25,
   "metrics": ["dc", "prec", "recall"],
 
