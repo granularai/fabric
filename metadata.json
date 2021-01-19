@@ -41,6 +41,7 @@
 
   "train_thres": 25,
   "augmentation": true,
+  "model": "unet_bidate",
 
   "num_gpus": 4,
   "num_workers": 30,

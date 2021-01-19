@@ -14,6 +14,7 @@ from phobos.runner import Runner
 from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
+from models.unet_multidate import UNetMultiDate
 from utils.dataloader import get_dataloaders
 
 
@@ -59,9 +60,24 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = grain_exp.load_model(BiDateNet,
-                             n_channels=len(args.band_ids),
-                             n_classes=1)
+if args.num_classes == 2:
+    n_classes = 1
+else:
+    n_classes = args.num_classes
+
+
+if args.model == 'unet_bidate':
+    model = grain_exp.load_model(BiDateNet,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=n_classes)
+
+if args.model == 'unet_multidate':
+    model = grain_exp.load_model(UNetMultiDate,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=n_classes,
+                                 patch_size=args.input_shape[2],
+                                 device=0)
+
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
