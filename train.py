@@ -62,16 +62,17 @@ Load Model then define other aspects of the model
 logging.info('LOADING Model')
 if args.model == 'bidate_unet':
     model = grain_exp.load_model(BiDateNet,
-                                n_channels=len(args.band_ids),
-                                n_classes=1)
-if args.model == 'xdxd_sn4':
+                                 n_channels=len(args.band_ids),
+                                 n_classes=1)
+if args.model == 'bidate_xdxd':
     model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
                                  n_channels=len(args.band_ids),
                                  n_classes=1)
 
 if args.pretrained_checkpoint:
-        pretrained = torch.load(os.path.join(args.weight_dir, args.pretrained_checkpoint))
-        model.load_state_dict(pretrained)
+    pretrained = torch.load(os.path.join(args.weight_dir,
+                                         args.pretrained_checkpoint))
+    model.load_state_dict(pretrained)
 
 if args.gpu > -1:
     model = model.to(args.gpu)
@@ -79,7 +80,7 @@ if args.gpu > -1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
 if args.resume_checkpoint:
-    weight = torch.load(os.path.join(args.weight_dir, args.resume_checkpoint))
+    weight = torch.load(args.resume_checkpoint)
     model.load_state_dict(weight)
 
 
