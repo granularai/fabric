@@ -76,8 +76,7 @@ if args.model == 'unet_multidate':
     model = grain_exp.load_model(UNetMultiDate,
                                  n_channels=len(args.band_ids),
                                  n_classes=n_classes,
-                                 patch_size=args.input_shape[2],
-                                 device=0)
+                                 patch_size=args.input_shape[2])
 
 if args.gpu > -1:
     model = model.to(args.gpu)
