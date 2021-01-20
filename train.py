@@ -43,7 +43,8 @@ if not local_testing():
         os.makedirs(args.local_artifacts_path)
     tf = tarfile.open(args.nfs_data_path)
     tf.extractall(args.local_artifacts_path)
-    args.dataset_dir = os.path.join(args.local_artifacts_path, 'onera/')
+    args.dataset_dir = os.path.join(args.local_artifacts_path,
+                                    args.dataset_name.split('.')[0])
 
     # log code to artifact/code folder
     # code_path = os.path.join(experiment.get_artifacts_path(), 'code')

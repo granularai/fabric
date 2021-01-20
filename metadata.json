@@ -43,7 +43,7 @@
   "augmentation": true,
   "model": "unet_multidate",
 
-  "num_gpus": 1,
+  "num_gpus": 4,
   "num_workers": 30,
 
 
