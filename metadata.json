@@ -1,8 +1,8 @@
 {
   "sensor": "sentinel2",
-  "input_shape": "2,4,256,256",
+  "input_shape": "2,3,256,256",
   "resolution": 10,
-  "band_ids": ["B02", "B03", "B04", "B08"],
+  "band_ids": ["B02", "B03", "B04"],
   "band_means": {
     "B01": 1617.5661643050978,
     "B02": 1422.3719453248793,
