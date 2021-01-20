@@ -47,7 +47,7 @@
   "num_workers": 8,
 
   "epochs": 100,
-  "batch_size": 256,
+  "batch_size": 128,
   "lr": 0.1,
   "loss": "binary_jaccard",
   "jaccard_weight": 0.25,
