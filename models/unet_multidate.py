@@ -69,14 +69,13 @@ class RNNCell(nn.Module):
 
 
 class set_values(nn.Module):
-    def __init__(self, hidden_size, height, width, device):
+    def __init__(self, hidden_size, height, width):
             super(set_values, self).__init__()
             self.hidden_size=int(hidden_size)
             self.height=int(height)
             self.width=int(width)
             self.dropout = nn.Dropout(0.7)
             self.RCell = RNNCell(self.hidden_size, self.hidden_size)
-            self.device = device
 
 
     def forward(self, seq, xinp):
@@ -84,16 +83,16 @@ class set_values(nn.Module):
                                     int(xinp.size()[1]),
                                     self.hidden_size,
                                     self.height,
-                                    self.width)).to(self.device)
+                                    self.width))
 
         h_state, c_state = ( Variable(torch.zeros(int(xinp[0].shape[0]),
                                                   self.hidden_size,
                                                   self.height,
-                                                  self.width)).to(self.device),
+                                                  self.width)),
                              Variable(torch.zeros(int(xinp[0].shape[0]),
                                                   self.hidden_size,
                                                   self.height,
-                                                  self.width)).to(self.device))
+                                                  self.width)))
 
         for t in range(xinp.size()[0]):
             input_t = seq(xinp[t])
@@ -104,26 +103,26 @@ class set_values(nn.Module):
 
 
 class UNetMultiDate(nn.Module):
-    def __init__(self, n_channels, n_classes, patch_size, device):
+    def __init__(self, n_channels, n_classes, patch_size):
         super(UNetMultiDate,self).__init__()
 
         self.patch_size = patch_size
         self.Maxpool = nn.MaxPool2d(kernel_size=2,stride=2)
 
         self.Conv1 = conv_block(ch_in=n_channels, ch_out=16)
-        self.set1 = set_values(16, self.patch_size, self.patch_size, device)
+        self.set1 = set_values(16, self.patch_size, self.patch_size)
 
         self.Conv2 = conv_block(ch_in=16, ch_out=32)
-        self.set2 = set_values(32, self.patch_size/2, self.patch_size/2, device)
+        self.set2 = set_values(32, self.patch_size/2, self.patch_size/2)
 
         self.Conv3 = conv_block(ch_in=32, ch_out=64)
-        self.set3 = set_values(64, self.patch_size/4, self.patch_size/4, device)
+        self.set3 = set_values(64, self.patch_size/4, self.patch_size/4)
 
         self.Conv4 = conv_block(ch_in=64, ch_out=128)
-        self.set4 = set_values(128, self.patch_size/8, self.patch_size/8, device)
+        self.set4 = set_values(128, self.patch_size/8, self.patch_size/8)
 
         self.Conv5 = conv_block(ch_in=128, ch_out=256)
-        self.set5 = set_values(256, self.patch_size/16, self.patch_size/16, device)
+        self.set5 = set_values(256, self.patch_size/16, self.patch_size/16)
 
         self.Up5 = up_conv(ch_in=256, ch_out=128)
         self.Up_conv5 = conv_block(ch_in=256, ch_out=128)
