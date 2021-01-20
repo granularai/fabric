@@ -88,7 +88,7 @@ if args.model == 'xdxd_bidate':
 if args.pretrained_checkpoint:
     pretrained = torch.load(args.pretrained_checkpoint)
     model.load_state_dict(pretrained)
-
+    
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
