@@ -75,43 +75,6 @@ def _resize(band, height, width):
     return band
 
 
-def normalize(img, mean, std, band_ids, max_pixel_value=255.0):
-    """Mean-std normalization of input image patch.
-    Parameters
-    ----------
-    img : numpy.ndarray
-        RGB image patch.
-    mean : dict
-        Mean of RGB channels.
-    std : dict
-        Standard deviation of RGB channels.
-    band_ids : list
-        Band IDs being used.
-    max_pixel_value : float
-        Max pixel value.
-    Returns
-    -------
-    type
-        Description of returned object.
-    """
-    mean = [mean[x] for x in band_ids]
-    std = [std[x] for x in band_ids]
-
-    mean = np.array(mean, dtype=np.float32)
-#     mean *= max_pixel_value
-
-    std = np.array(std, dtype=np.float32)
-#     std *= max_pixel_value
-
-    denominator = np.reciprocal(std, dtype=np.float32)
-
-    img = img.transpose()
-    img = img.astype(np.float32) / max_pixel_value
-    img -= mean
-    img *= denominator
-    return img.transpose()
-    
-
 def stretch_8bit(band, lower_percent=2, higher_percent=98):
     """Stretch 8bit a 16bit or higher bit image.
 
@@ -251,7 +214,40 @@ def city_loader(city_meta):
         band = cv2.resize(band, (h, w))
         bands_date2.append(band)
 
-    band_stacked = np.stack((bands_date1, bands_date2))
+    if 'multidate' in args.model:
+        bands_mid1 = []
+        for i in range(len(args.band_ids)):
+            band = rasterio.open(os.path.join(city, "imgs_mid_1",
+                                 args.band_ids[i] + '.tif')
+                                 ).read()[0].astype(np.float32)
+            band = (band - args.band_means[args.band_ids[i]]) /\
+                args.band_stds[args.band_ids[i]]
+            band = cv2.resize(band, (h, w))
+            bands_mid1.append(band)
+
+        bands_mid2 = []
+        for i in range(len(args.band_ids)):
+            band = rasterio.open(os.path.join(city, "imgs_mid_2",
+                                 args.band_ids[i] + '.tif')
+                                 ).read()[0].astype(np.float32)
+            band = (band - args.band_means[args.band_ids[i]]) /\
+                args.band_stds[args.band_ids[i]]
+            band = cv2.resize(band, (h, w))
+            bands_mid2.append(band)
+
+        bands_mid3 = []
+        for i in range(len(args.band_ids)):
+            band = rasterio.open(os.path.join(city, "imgs_mid_3",
+                                 args.band_ids[i] + '.tif')
+                                 ).read()[0].astype(np.float32)
+            band = (band - args.band_means[args.band_ids[i]]) /\
+                args.band_stds[args.band_ids[i]]
+            band = cv2.resize(band, (h, w))
+            bands_mid3.append(band)
+        band_stacked = np.stack((bands_date1, bands_mid1, bands_mid2,
+                                 bands_mid3, bands_date2))
+    else:
+        band_stacked = np.stack((bands_date1, bands_date2))
 
     return band_stacked
 
