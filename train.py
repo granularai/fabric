@@ -14,6 +14,7 @@ from phobos.runner import Runner
 from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
+from models.unet_multidate import UNetMultiDate
 from utils.dataloader import get_dataloaders
 
 
@@ -42,7 +43,8 @@ if not local_testing():
         os.makedirs(args.local_artifacts_path)
     tf = tarfile.open(args.nfs_data_path)
     tf.extractall(args.local_artifacts_path)
-    args.dataset_dir = os.path.join(args.local_artifacts_path, 'onera/')
+    args.dataset_dir = os.path.join(args.local_artifacts_path,
+                                    args.dataset_name.split('.')[0])
 
     # log code to artifact/code folder
     # code_path = os.path.join(experiment.get_artifacts_path(), 'code')
@@ -59,9 +61,24 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-model = grain_exp.load_model(BiDateNet,
-                             n_channels=len(args.band_ids),
-                             n_classes=1)
+if args.num_classes == 2:
+    n_classes = 1
+else:
+    n_classes = args.num_classes
+
+
+if args.model == 'unet_bidate':
+    model = grain_exp.load_model(BiDateNet,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=n_classes)
+
+if args.model == 'unet_multidate':
+    model = grain_exp.load_model(UNetMultiDate,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=n_classes,
+                                 patch_size=args.input_shape[2],
+                                 device="cuda:0")
+
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
@@ -103,7 +120,8 @@ for epoch in range(args.epochs):
         best_dc = eval_metrics['val_dc']
 
         best_metrics = {**train_metrics, **eval_metrics}
-        experiment.log_outputs(**best_metrics)
+        if not local_testing():
+            experiment.log_outputs(**best_metrics)
 
-if experiment:
+if not local_testing():
     experiment.log_outputs(**best_metrics)
