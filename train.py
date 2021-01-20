@@ -44,11 +44,12 @@ if not local_testing():
         os.makedirs(args.local_artifacts_path)
     tf = tarfile.open(args.nfs_data_path)
     tf.extractall(args.local_artifacts_path)
-    args.dataset_dir = os.path.join(args.local_artifacts_path, 'onera/')
+    args.dataset_dir = os.path.join(args.local_artifacts_path,
+                                    args.dataset_name.split('.')[0])
 
     # log code to artifact/code folder
-    code_path = os.path.join(experiment.get_artifacts_path(), 'code')
-    copytree('.', code_path, ignore=ignore_patterns('.*'))
+    # code_path = os.path.join(experiment.get_artifacts_path(), 'code')
+    # copytree('.', code_path, ignore=ignore_patterns('.*'))
 
     # set artifact/weight folder
     args.weight_dir = os.path.join(experiment.get_artifacts_path(), 'weights')
@@ -85,8 +86,7 @@ if args.model == 'xdxd_bidate':
                                  n_classes=1)
 
 if args.pretrained_checkpoint:
-    pretrained = torch.load(os.path.join(args.weight_dir,
-                                         args.pretrained_checkpoint))
+    pretrained = torch.load(args.pretrained_checkpoint)
     model.load_state_dict(pretrained)
 
 if args.gpu > -1:
