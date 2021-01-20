@@ -15,6 +15,6 @@ run:
     command: ['/bin/bash', 'run.sh']
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 1
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 1
