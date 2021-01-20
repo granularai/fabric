@@ -214,7 +214,40 @@ def city_loader(city_meta):
         band = cv2.resize(band, (h, w))
         bands_date2.append(band)
 
-    band_stacked = np.stack((bands_date1, bands_date2))
+    if 'multidate' in args.model:
+        bands_mid1 = []
+        for i in range(len(args.band_ids)):
+            band = rasterio.open(os.path.join(city, "imgs_mid_1",
+                                 args.band_ids[i] + '.tif')
+                                 ).read()[0].astype(np.float32)
+            band = (band - args.band_means[args.band_ids[i]]) /\
+                args.band_stds[args.band_ids[i]]
+            band = cv2.resize(band, (h, w))
+            bands_mid1.append(band)
+
+        bands_mid2 = []
+        for i in range(len(args.band_ids)):
+            band = rasterio.open(os.path.join(city, "imgs_mid_2",
+                                 args.band_ids[i] + '.tif')
+                                 ).read()[0].astype(np.float32)
+            band = (band - args.band_means[args.band_ids[i]]) /\
+                args.band_stds[args.band_ids[i]]
+            band = cv2.resize(band, (h, w))
+            bands_mid2.append(band)
+
+        bands_mid3 = []
+        for i in range(len(args.band_ids)):
+            band = rasterio.open(os.path.join(city, "imgs_mid_3",
+                                 args.band_ids[i] + '.tif')
+                                 ).read()[0].astype(np.float32)
+            band = (band - args.band_means[args.band_ids[i]]) /\
+                args.band_stds[args.band_ids[i]]
+            band = cv2.resize(band, (h, w))
+            bands_mid3.append(band)
+        band_stacked = np.stack((bands_date1, bands_mid1, bands_mid2,
+                                 bands_mid3, bands_date2))
+    else:
+        band_stacked = np.stack((bands_date1, bands_date2))
 
     return band_stacked
 
