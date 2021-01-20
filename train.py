@@ -15,6 +15,7 @@ from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
 from models.unet_multidate import UNetMultiDate
+from models.xdxd_sn4_bidate import XDXD_SpaceNet4_UNetVGG16
 from utils.dataloader import get_dataloaders
 
 
@@ -79,14 +80,36 @@ if args.model == 'unet_multidate':
                                  patch_size=args.input_shape[2],
                                  device="cuda:0")
 
+if args.model == 'xdxd_bidate':
+    model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=1)
+
+if args.pretrained_checkpoint:
+    pretrained = torch.load(args.pretrained_checkpoint)
+    model.load_state_dict(pretrained)
+    
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
+if args.resume_checkpoint:
+    weight = torch.load(args.resume_checkpoint)
+    model.load_state_dict(weight)
+
+
 criterion = get_loss(args)
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
 # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-2)
+
+runner = Runner(model=model,
+                optimizer=optimizer,
+                criterion=criterion,
+                train_loader=train_loader,
+                val_loader=val_loader,
+                args=args,
+                polyaxon_exp=experiment)
 
 runner = Runner(model=model,
                 optimizer=optimizer,
