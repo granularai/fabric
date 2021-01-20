@@ -119,7 +119,8 @@ for epoch in range(args.epochs):
         best_dc = eval_metrics['val_dc']
 
         best_metrics = {**train_metrics, **eval_metrics}
-        experiment.log_outputs(**best_metrics)
+        if not local_testing():
+            experiment.log_outputs(**best_metrics)
 
-if experiment:
+if not local_testing():
     experiment.log_outputs(**best_metrics)
