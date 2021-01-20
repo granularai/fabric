@@ -14,6 +14,7 @@ from phobos.runner import Runner
 from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
+from models.unet_multidate import
 from models.xdxd_sn4_bidate import XDXD_SpaceNet4_UNetVGG16
 from utils.dataloader import get_dataloaders
 
@@ -60,10 +61,24 @@ train_loader, val_loader = get_dataloaders(args)
 Load Model then define other aspects of the model
 """
 logging.info('LOADING Model')
-if args.model == 'bidate_unet':
+if args.num_classes == 2:
+    n_classes = 1
+else:
+    n_classes = args.num_classes
+
+
+if args.model == 'unet_bidate':
     model = grain_exp.load_model(BiDateNet,
                                  n_channels=len(args.band_ids),
-                                 n_classes=1)
+                                 n_classes=n_classes)
+
+if args.model == 'unet_multidate':
+    model = grain_exp.load_model(UNetMultiDate,
+                                 n_channels=len(args.band_ids),
+                                 n_classes=n_classes,
+                                 patch_size=args.input_shape[2],
+                                 device="cuda:0")
+
 if args.model == 'bidate_xdxd':
     model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
                                  n_channels=len(args.band_ids),
@@ -96,7 +111,16 @@ runner = Runner(model=model,
                 args=args,
                 polyaxon_exp=experiment)
 
+runner = Runner(model=model,
+                optimizer=optimizer,
+                criterion=criterion,
+                train_loader=train_loader,
+                val_loader=val_loader,
+                args=args,
+                polyaxon_exp=experiment)
+
 best_dc = -1
+best_metrics = None
 
 logging.info('STARTING training')
 for epoch in range(args.epochs):
@@ -117,3 +141,10 @@ for epoch in range(args.epochs):
                                 'checkpoint_epoch_' + str(epoch) + '.pt')
         torch.save(model.state_dict(), cpt_path)
         best_dc = eval_metrics['val_dc']
+
+        best_metrics = {**train_metrics, **eval_metrics}
+        if not local_testing():
+            experiment.log_outputs(**best_metrics)
+
+if not local_testing():
+    experiment.log_outputs(**best_metrics)
