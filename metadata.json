@@ -43,11 +43,11 @@
   "augmentation": true,
   "model": "xdxd_bidate",
 
-  "num_gpus": 1,
+  "num_gpus": 4,
   "num_workers": 8,
 
   "epochs": 100,
-  "batch_size": 128,
+  "batch_size": 256,
   "lr": 0.1,
   "loss": "binary_jaccard",
   "jaccard_weight": 0.25,
