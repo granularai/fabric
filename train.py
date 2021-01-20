@@ -79,7 +79,7 @@ if args.model == 'unet_multidate':
                                  patch_size=args.input_shape[2],
                                  device="cuda:0")
 
-if args.model == 'bidate_xdxd':
+if args.model == 'xdxd_bidate':
     model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
                                  n_channels=len(args.band_ids),
                                  n_classes=1)
