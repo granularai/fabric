@@ -43,12 +43,12 @@
   "augmentation": true,
   "model": "unet_multidate",
 
-  "num_gpus": 4,
+  "num_gpus": 1,
   "num_workers": 30,
 
 
   "epochs": 100,
-  "batch_size": 256,
+  "batch_size": 128,
   "lr": 0.1,
   "loss": "binary_jaccard",
   "jaccard_weight": 0.25,
