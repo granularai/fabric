@@ -14,7 +14,7 @@ from phobos.runner import Runner
 from phobos.grain import Grain
 
 from models.bidate_model import BiDateNet
-from models.unet_multidate import
+from models.unet_multidate import UNetMultiDate
 from models.xdxd_sn4_bidate import XDXD_SpaceNet4_UNetVGG16
 from utils.dataloader import get_dataloaders
 
