@@ -88,7 +88,7 @@ if args.model == 'xdxd_bidate':
 if args.pretrained_checkpoint:
     pretrained = torch.load(args.pretrained_checkpoint)
     model.load_state_dict(pretrained)
-    
+
 if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
@@ -99,20 +99,28 @@ if args.resume_checkpoint:
     model.load_state_dict(weight)
 
 
-criterion = get_loss(args)
-optimizer = optim.SGD(model.parameters(), lr=args.lr)
+class DiceLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(DiceLoss, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+
+        #comment out if your model contains a sigmoid or equivalent activation layer
+
+        #flatten label and prediction tensors
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+
+        intersection = (inputs * targets).sum()
+        dice = (2.*intersection + smooth)/(inputs.sum() + targets.sum() + smooth)
+
+        return 1 - dice
+
+criterion = DiceLoss()
+# optimizer = optim.SGD(model.parameters(), lr=args.lr)
 # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-2)
 
 runner = Runner(model=model,
-                optimizer=optimizer,
-                criterion=criterion,
-                train_loader=train_loader,
-                val_loader=val_loader,
-                args=args,
-                polyaxon_exp=experiment)
-
-runner = Runner(model=model,
-                optimizer=optimizer,
                 criterion=criterion,
                 train_loader=train_loader,
                 val_loader=val_loader,
