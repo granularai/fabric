@@ -10,7 +10,7 @@ run:
       polyaxon: p4-pool
   connections: [datasets, artifacts-store]
   container:
-    image: gcr.io/granular-ai/training-base:nightly
+    image: gcr.io/granular-ai/phobos:latest
     workingDir: "{{ globals.run_artifacts_path }}/code"
     command: ['/bin/bash', 'run.sh']
     resources:
