@@ -41,7 +41,7 @@
 
   "train_thres": 25,
   "augmentation": true,
-  "model": "unet_multidate",
+  "model": "unet_bidate",
 
   "num_gpus": 4,
   "num_workers": 16,
@@ -50,7 +50,7 @@
   "epochs": 100,
   "batch_size": 512,
   "scheduler": "step",
-  "scheduler_args": {"step_size": 25, "gamma": 0.1},
+  "scheduler_args": {"step_size": 15, "gamma": 0.1},
   "optimizer": "sgd",
   "optimizer_args": {"lr": 0.1},
   "loss": "binary_jaccard",
