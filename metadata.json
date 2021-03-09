@@ -43,7 +43,7 @@
   "augmentation": true,
   "model": "unet_bidate",
 
-  "num_gpus": 4,
+  "num_gpus": 1,
   "num_workers": 16,
   "backend": "gloo",
 
