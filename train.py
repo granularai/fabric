@@ -50,6 +50,9 @@ logging.basicConfig(level=logging.INFO)
 """
 Set up environment: define paths, download data, and set device
 """
+if args.backend == "gloo":
+    args.backend = dist.Backend.GLOO
+    
 if should_distribute():
     print('Using distributed PyTorch with {} backend'.format(args.backend))
     dist.init_process_group(backend=args.backend)
