@@ -45,7 +45,7 @@
 
   "num_gpus": 4,
   "num_workers": 16,
-
+  "backend": "gloo",
 
   "epochs": 100,
   "batch_size": 512,
