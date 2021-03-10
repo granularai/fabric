@@ -48,7 +48,7 @@
   "backend": "gloo",
 
   "epochs": 100,
-  "batch_size": 512,
+  "batch_size": 64,
   "scheduler": "step",
   "scheduler_args": {"step_size": 15, "gamma": 0.1},
   "optimizer": "sgd",

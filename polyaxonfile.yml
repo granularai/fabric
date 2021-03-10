@@ -21,7 +21,7 @@ run:
         limits:
           nvidia.com/gpu: 1
   worker:
-    replicas: 1
+    replicas: 3
     environment:
       nodeSelector:
         polyaxon: p4-pool
