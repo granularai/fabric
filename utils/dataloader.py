@@ -425,9 +425,11 @@ def get_dataloaders(args):
     train_loader = data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    shuffle=True,
-                                   num_workers=args.num_workers)
+                                   num_workers=args.num_workers,
+                                   pin_memory=True)
     val_loader = data.DataLoader(val_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 num_workers=args.num_workers)
+                                 num_workers=args.num_workers,
+                                 pin_memory=True)
     return train_loader, val_loader
