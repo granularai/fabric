@@ -5,7 +5,8 @@ from shutil import copytree, ignore_patterns
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.distributed as dist
+
 
 from polyaxon.tracking import Run
 
@@ -27,6 +28,17 @@ def local_testing():
         False
 
 
+WORLD_SIZE = int(os.environ.get('WORLD_SIZE', 1))
+
+
+def should_distribute():
+    return dist.is_available() and WORLD_SIZE > 1
+
+
+def is_distributed():
+    return dist.is_available() and dist.is_initialized()
+
+
 experiment = None
 if not local_testing():
     experiment = Run()
@@ -38,6 +50,12 @@ logging.basicConfig(level=logging.INFO)
 """
 Set up environment: define paths, download data, and set device
 """
+if args.backend == "gloo":
+    args.backend = dist.Backend.GLOO
+    
+if should_distribute():
+    print('Using distributed PyTorch with {} backend'.format(args.backend))
+    dist.init_process_group(backend=args.backend)
 
 if not local_testing():
     if not os.path.exists(args.local_artifacts_path):
@@ -93,6 +111,9 @@ if args.gpu > -1:
     model = model.to(args.gpu)
     if args.num_gpus > 1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
+    if is_distributed():
+        Distributor = nn.parallel.DistributedDataParallel
+        model = Distributor(model)
 
 if args.resume_checkpoint:
     weight = torch.load(args.resume_checkpoint)
