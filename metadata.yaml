@@ -1,0 +1,95 @@
+_comment: Training a chip classifier that classifier NAIP images in to one of 4 classes.
+augmentation: true
+band_ids:
+- Red
+- Green
+- Blue
+- NIR
+batch_size: 256
+dataset_name: oscd
+dataset_path: /media/workspace/datasets/oscd
+load: full
+distributed: false
+verbose: true
+num_gpus: 1
+ratio: 0.8
+stride: 16
+thres: 25
+input:
+    heads:
+        'rgbn':
+            sensor: NAIP
+            resolution: 1
+            shape: 
+                D: 5
+                C: 4
+                H: 64
+                W: 64
+            bands: 
+                Red:
+                    min: 0.0
+                    max: 28000.0
+                    std: 849.36709395436458
+                    mean: 1414.6782051630655
+                Green:
+                    min: 0.0
+                    max: 28000.0
+                    std: 590.13027145320575
+                    mean: 1359.3729378266555
+                Blue:
+                    min: 0.0
+                    max: 28000.0
+                    std: 456.24958899714318
+                    mean: 1422.3719453248793
+                NIR:
+                    min: 0.0
+                    max: 28000.0
+                    std: 901.61466840470621
+                    mean: 2118.5600261598356
+            transforms:
+                train:
+                    normalize: null
+                    verticalflip:
+                        p: 0.5
+                    horizontalflip:
+                        p: 0.5
+                val:
+                    normalize: null
+output:
+    heads:
+        'cd':
+            logits: false
+            num_classes: 2
+            metrics:
+                precision:
+                    average: macro 
+                recall:
+                    average: macro
+                f1:
+                    average: macro
+            loss:
+                bcejaccardloss:
+                    jaccard_weight: 0.25
+local_artifacts_path: ../local_artifacts/
+max_iters: 100
+frequency: 10
+mode: epoch
+model: unetmultidate
+nfs_data_path: /h5ai/oscd.tar.gz
+num_classes: 2
+num_workers: 8
+optimizer: sgd
+optimizer_args: 
+    lr: 0.1
+scheduler: steplr
+scheduler_args: 
+    step_size: 30
+    gamma: 0.1
+pretrained_checkpoint: null
+resume_checkpoint: null
+project_name: OSCD
+resolution: 1
+sensor: NAIP
+val_frequency: 10
+validation_ratio: 0.7
+weight_dir: /media/workspace/weights/oscd

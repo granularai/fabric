@@ -1,69 +1,66 @@
-import os
-import logging
+from utils import getLoadersMap
+from models import UNetMultiDate
+
 import tarfile
-from shutil import copytree, ignore_patterns
+import os, logging
 
 import torch
 import torch.nn as nn
-import torch.distributed as dist
 
+from phobos.grain import Grain
+from phobos.runner import Runner
 
 from polyaxon.tracking import Run
 
-from phobos.loss import get_loss
-from phobos.runner import Runner
-from phobos.grain import Grain
 
-from models.bidate_model import BiDateNet
-from models.unet_multidate import UNetMultiDate
-from models.xdxd_sn4_bidate import XDXD_SpaceNet4_UNetVGG16
-from utils.dataloader import get_dataloaders
-
-
-def local_testing():
-    if 'POLYAXON_NO_OP' in os.environ:
-        if os.environ['POLYAXON_NO_OP'] == 'true':
-            return True
-    else:
-        False
-
-
-WORLD_SIZE = int(os.environ.get('WORLD_SIZE', 1))
-
-
-def should_distribute():
-    return dist.is_available() and WORLD_SIZE > 1
-
-
-def is_distributed():
-    return dist.is_available() and dist.is_initialized()
-
+################### Polyaxon / Local ###################
+"""
+Initialization to use datalab or local system for training.
+"""
 
 experiment = None
-if not local_testing():
+if not Runner.local_testing():
     experiment = Run()
 
-grain_exp = Grain(polyaxon_exp=experiment)
-args = grain_exp.parse_args_from_json('metadata.json')
 
-logging.basicConfig(level=logging.INFO)
-"""
-Set up environment: define paths, download data, and set device
-"""
-if args.backend == "gloo":
-    args.backend = dist.Backend.GLOO
-    
-if should_distribute():
-    print('Using distributed PyTorch with {} backend'.format(args.backend))
-    dist.init_process_group(backend=args.backend)
+################### Polyaxon / Local ###################
 
-if not local_testing():
+################### Arguments ###################
+
+"""Initialize all arguments passed via metadata.json
+"""
+args = Grain(yaml='metadata.yaml',polyaxon_exp=experiment)
+
+################### Arguments ###################
+
+############## Input & Output from Grain ###############
+
+inputs, outputs = args.get_inputs_outputs()
+
+logging.basicConfig(level=logging.WARNING)
+
+########################################################
+
+
+################### Setup Data and Weight ###################
+
+if not Runner.local_testing():
+    """
+    When using datalab for training, we need to see how data is stored in datastore 
+    and copy, untar, or pass url properly depending on how we use the datastore. 
+    This will require a bit of effort in understanding the structure of the dataset, 
+    like are train, val tarred together or are they different. Are we using webdataset
+    shards, etc. We will eventually move to a unified framwork under webdataset-aistore
+    for all dataset coming from Europa and all third party open-source datasets.
+    """
     if not os.path.exists(args.local_artifacts_path):
         os.makedirs(args.local_artifacts_path)
+
     tf = tarfile.open(args.nfs_data_path)
     tf.extractall(args.local_artifacts_path)
-    args.dataset_dir = os.path.join(args.local_artifacts_path,
-                                    args.dataset_name.split('.')[0])
+    #tf = tarfile.open(os.path.join(args.nfs_data_path, 'test.tar.gz'))
+    #tf.extractall(args.local_artifacts_path)
+    args.dataset_path = os.path.join(args.local_artifacts_path,args.dataset_name.lower())
 
     # log code to artifact/code folder
     # code_path = os.path.join(experiment.get_artifacts_path(), 'code')
@@ -75,105 +72,130 @@ if not local_testing():
 if not os.path.exists(args.weight_dir):
     os.makedirs(args.weight_dir)
 
-train_loader, val_loader = get_dataloaders(args)
+
+################### Setup Data and Weight Directories ###################
+
+loaders = getLoadersMap(args,inputs)
+
+print(f'train loader length : {len(loaders["train"])}')
+print(f'val loader length : {len(loaders["val"])}\n')
+'''
+AIS webdataset eg,
+def preproc(data):
+    inp1 = data['x.pth']
+    inp1 = torch.unsqueeze(inp1,0)
+
+    out1 = data['y.cls']
+
+    x = {'inp1': inp1}
+    y = {'out1': out1}
+    
+    return x,y
+
+urlmap = { 
+    'train': 'http://aistore.granular.ai/v1/objects/test_ais/train/train-{0..4}.tar?provider=gcp',
+    'val': 'http://aistore.granular.ai/v1/objects/test_ais/val/val-{0..4}.tar?provider=gcp',
+}
+transmap = {'train': preproc, 'val': preproc }
+
+loaders = getWebDataLoaders(
+    posixes=urlmap,
+    transforms=transmap,
+    shuffle=True,
+    batch_size=args.batch_size,
+    num_workers=args.num_workers,
+    distributed=args.distributed,
+)
+'''
+
+################### Intialize Model ###################
 """
 Load Model then define other aspects of the model
 """
-logging.info('LOADING Model')
-if args.num_classes == 2:
+
+shape = inputs.heads['rgbn'].shape.H
+device = torch.device("cuda",0)
+n_channels = inputs.heads['rgbn'].shape.C
+
+n_classes  = outputs.heads['cd'].num_classes
+if n_classes == 2:
     n_classes = 1
-else:
-    n_classes = args.num_classes
 
+if args.model == 'unetmultidate':
+    model = args.load_model(UNetMultiDate,
+                                n_channels=n_channels,
+                                n_classes=n_classes,
+                                patch_size=shape,
+                                device=device
+                                )
 
-if args.model == 'unet_bidate':
-    model = grain_exp.load_model(BiDateNet,
-                                 n_channels=len(args.band_ids),
-                                 n_classes=n_classes)
-
-if args.model == 'unet_multidate':
-    model = grain_exp.load_model(UNetMultiDate,
-                                 n_channels=len(args.band_ids),
-                                 n_classes=n_classes,
-                                 patch_size=args.input_shape[2],
-                                 device="cuda:0")
-
-if args.model == 'xdxd_bidate':
-    model = grain_exp.load_model(XDXD_SpaceNet4_UNetVGG16,
-                                 n_channels=len(args.band_ids),
-                                 n_classes=1)
+if args.distributed:
+    model = nn.parallel.DistributedDataParallel(model, find_unused_parameters=False)
+elif args.num_gpus > 1:
+    model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
 if args.pretrained_checkpoint:
+    """
+    If you have any pretrained weights that you want to load for the model, this 
+    is the place to do it.
+    """
     pretrained = torch.load(args.pretrained_checkpoint)
     model.load_state_dict(pretrained)
 
-if args.gpu > -1:
-    model = model.to(args.gpu)
-    if args.num_gpus > 1:
-        model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
-    if is_distributed():
-        Distributor = nn.parallel.DistributedDataParallel
-        model = Distributor(model)
-
 if args.resume_checkpoint:
+    """If we want to resume training from some checkpoints.
+    """
     weight = torch.load(args.resume_checkpoint)
     model.load_state_dict(weight)
 
+################### Intialize Model ###################
 
-class DiceLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super(DiceLoss, self).__init__()
+################### Intialize Runner ###################
 
-    def forward(self, inputs, targets, smooth=1):
+runner = Runner(
+    model=model,
+    device=args.device,
+    train_loader=loaders['train'],
+    val_loader=loaders['val'], 
+    inputs=inputs, 
+    outputs=outputs, 
+    optimizer=args.optimizer, 
+    optimizer_args=args.optimizer_args,
+    scheduler=args.scheduler,
+    scheduler_args=args.scheduler_args,
+    mode=args.mode,
+    distributed=args.distributed,
+    verbose=args.verbose,
+    max_iters=args.max_iters,
+    frequency=args.frequency, 
+    tensorboard_logging=True, 
+    polyaxon_exp=experiment
+)
 
-        #comment out if your model contains a sigmoid or equivalent activation layer
+################### Intialize Runner ###################
 
-        #flatten label and prediction tensors
-        inputs = inputs.view(-1)
-        targets = targets.view(-1)
+################### Train ###################
+"""Dice coeffiecient is used to select best model weights.
+Use metric as you think is best for your problem.
+"""
 
-        intersection = (inputs * targets).sum()
-        dice = (2.*intersection + smooth)/(inputs.sum() + targets.sum() + smooth)
-
-        return 1 - dice
-
-criterion = DiceLoss()
-# optimizer = optim.SGD(model.parameters(), lr=args.lr)
-# optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-2)
-
-runner = Runner(model=model,
-                criterion=criterion,
-                train_loader=train_loader,
-                val_loader=val_loader,
-                args=args,
-                polyaxon_exp=experiment)
-
-best_dc = -1
+best_val = -1e5
 best_metrics = None
 
 logging.info('STARTING training')
-for epoch in range(args.epochs):
-    """
-    Begin Training
-    """
-    logging.info('SET model mode to train!')
-    runner.set_epoch_metrics()
-    train_metrics = runner.train_model()
-    eval_metrics = runner.eval_model()
-    print(train_metrics)
-    print(eval_metrics)
-    """
-    Store the weights of good epochs based on validation results
-    """
-    if eval_metrics['val_dc'] > best_dc:
-        cpt_path = os.path.join(args.weight_dir,
-                                'checkpoint_epoch_' + str(epoch) + '.pt')
-        torch.save(model.state_dict(), cpt_path)
-        best_dc = eval_metrics['val_dc']
 
-        best_metrics = {**train_metrics, **eval_metrics}
-        if not local_testing():
-            experiment.log_outputs(**best_metrics)
+for step, outputs in runner.trainer():
+    if runner.master():
+        print(f'step: {step}')
+        outputs.print()
 
-if not local_testing():
-    experiment.log_outputs(**best_metrics)
+        val_f1 = outputs.heads['cd'].means['val_metrics']['f1']
+        if val_f1 > best_val:
+            best_val = val_f1
+            cpt_path = os.path.join(args.weight_dir,
+                                    'checkpoint_epoch_'+ str(step) + '.pt')
+            state_dict = model.module.state_dict() if runner.distributed \
+                else model.state_dict()
+            torch.save(state_dict, cpt_path)
+
+################### Train ###################

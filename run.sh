@@ -1,5 +1,3 @@
-echo 'starting dependency install...'
-# pip install -r requirements.txt
-echo 'completed dependency install.'
-echo 'starting training...'
+export PYTHONPATH=/code
+pip install -r requirements.txt
 python train.py

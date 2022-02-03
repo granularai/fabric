@@ -155,6 +155,8 @@ class UNetMultiDate(nn.Module):
         return x1, x2, x3, x4, x5
 
     def forward(self, input):
+        input = input['rgbn']
+
         input = input.permute(1, 0, 2, 3, 4)
         #encoding path
         x1, x2, x3, x4, x5 = self.encoder(input)
@@ -179,4 +181,5 @@ class UNetMultiDate(nn.Module):
         d1 = self.Conv_1x1(d2)
         d1 = torch.sigmoid(d1).squeeze(1)
 
-        return d1
+        output = { 'cd': d1 }
+        return output
