@@ -19,8 +19,8 @@ The code has been tested on:
 ## Multidate Sentinel-2 dataset
 
 1. [OSCD](https://rcdaudt.github.io/oscd/)
-2. [OSCD + Our Dates](https://drive.google.com/file/d/1wCrqXVd0mKbKvwk8uUS9c-1Eib6qg0Ti/view?usp=sharing)
-3. [Pretrained weight for Bi-Date Siamese Model](https://drive.google.com/file/d/1z4-NIKY0ICnn2KmaMUVwll41A9kz8bVX/view?usp=sharing)
+2. [OSCD + Our Dates](https://engine.granular.ai/organizations/granular/projects/61916375b40d35cba31b0b29/overview)
+3. [Pretrained weight for Bi-Date Siamese Model](https://engine.granular.ai/organizations/granular/projects/61916375b40d35cba31b0b29/overview)
 
 
 ## Contact
